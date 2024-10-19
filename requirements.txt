@@ -1,0 +1,6 @@
+Flask
+Dash
+pymongo
+werkzeug
+Flask-Cors
+requests

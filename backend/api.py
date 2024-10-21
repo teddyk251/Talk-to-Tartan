@@ -9,7 +9,7 @@ app = Flask(__name__)
 CORS(app)  # Allow requests from Dash to Flask
 
 # MongoDB setup
-client = MongoClient('mongodb+srv://teddylnk1:QediKATX9h71opAb@cluster0.1gznc.mongodb.net/my_project_db?retryWrites=true&w=majority')
+client = MongoClient('mongodb+srv://teddylnk1:QediKATX9h71opAb@cluster0.1gznc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
 db = client['my_project_db']
 users_collection = db['users']
 
@@ -29,6 +29,7 @@ def sign_up():
 # User sign-in route
 @app.route('/signin', methods=['POST'])
 def sign_in():
+    print("Called sign in")
     data = request.get_json()
     username = data['username']
     password = data['password']

@@ -1,5 +1,5 @@
 import dash
-from dash import html, dcc, Input, Output, callback
+from dash import html, dcc, Input, Output, callback, ALL
 from utils.helpers import iconify
 import dash_mantine_components as dmc 
 
@@ -40,7 +40,11 @@ layout = dmc.Paper(
                     name='id',
                     placeholder="Enter your Andrew ID",
                     required = True,
-                    leftSection=iconify(icon="streamline:interface-id-thumb-mark-identification-password-touch-id-secure-fingerprint-finger-security", width=20),
+                    leftSection=iconify(
+                        icon="streamline:interface-id-thumb-mark-identification-\
+                            password-touch-id-secure-fingerprint-finger-security", 
+                        width=20
+                    ),
                 ),
                 dmc.PasswordInput(
                     mb=20,
@@ -61,7 +65,7 @@ layout = dmc.Paper(
                         my=10
                     ),
                     id="program-radio-group",
-                    value="MSEAI",
+                    value="EAI",
                     label="Select your program",
                     size="sm",
                     mb=10,
@@ -115,6 +119,10 @@ layout = dmc.Paper(
                         dmc.Text(f"Already have an Account?", c='gray', size = 'xs'),
                         html.A('Sign in', href='/login', style = {'fontSize':'12px'})
                     ]
+                ),
+                html.Div(
+                    id='output-div',
+                    style={'marginTop': '20px'}
                 )  
             ]
         )
@@ -142,7 +150,7 @@ def update_semester_input(first_semester, completed_semesters):
                     dmc.Grid([
                         dmc.GridCol(
                             dmc.TextInput(
-                                id=f'course-{i}-{j}',  # Unique ID for course code
+                                id={'type': 'course-code', 'semester': i, 'course': j},  # Unique ID for course code
                                 label='Course Code',
                                 placeholder='Enter course code',
                             ),
@@ -150,7 +158,7 @@ def update_semester_input(first_semester, completed_semesters):
                         ),
                         dmc.GridCol(
                             dmc.TextInput(
-                                id=f'course-title-{i}-{j}',  # Unique ID for course title
+                                id={'type': 'course-title', 'semester': i, 'course': j},  # Unique ID for course title
                                 label='Course Title',
                                 placeholder='Enter course title',
                             ),
@@ -158,17 +166,49 @@ def update_semester_input(first_semester, completed_semesters):
                         )
                     ], gutter='xs')  # Small gutter between the columns
                 )
+
             # Create an Accordion for each semester with the course inputs
             semester_section = dmc.Accordion(
-                children=[
                     dmc.AccordionItem(
-                        children=courses,  # List of course rows
-                        value=f"Semester-{i + 1}"  # Unique value for each AccordionItem
+                        children=[
+                            dmc.AccordionControl(f"Semester-{i + 1}"),
+                            dmc.AccordionPanel(
+                                children=courses, # List of course rows
+                                id=f"semester-{i + 1}"  # Unique ID for each AccordionPanel
+                            ), 
+                        ],
+                        value=f"semester-{i + 1}"  # Unique value for each AccordionItem
                     )
-                ]
             )
             semester_sections.append(semester_section)
 
         return semester_sections
     else:
         return []
+    
+
+@callback(
+    Output('output-div', 'children'),  # Use any output to show the data or handle it
+    Input({'type': 'course-code', 'semester': 0, 'course': ALL}, 'value'),
+    Input({'type': 'course-title', 'semester': 0, 'course': ALL}, 'value'),
+    Input({'type': 'course-code', 'semester': 1, 'course': ALL}, 'value'),
+    Input({'type': 'course-title', 'semester': 1, 'course': ALL}, 'value'),
+    Input({'type': 'course-code', 'semester': 2, 'course': ALL}, 'value'),
+    Input({'type': 'course-title', 'semester': 2, 'course': ALL}, 'value'),
+)
+def update_courses(
+    course_codes_sem1, 
+    course_titles_sem1,
+    course_codes_sem2,
+    course_titles_sem2,
+    course_codes_sem3,
+    course_titles_sem3
+):
+    # Process the collected course codes and titles here
+    courses_info = []
+    for i, (code, title) in enumerate(zip(course_codes_sem1, course_titles_sem1)):
+        courses_info.append(f"Course {i+1}: {code} - {title}")
+    
+    print(courses_info)
+
+    return courses_info

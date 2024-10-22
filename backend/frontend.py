@@ -32,13 +32,13 @@ app.layout = html.Div([
 )
 def authenticate_user(sign_up_clicks, sign_in_clicks, username, password):
     if sign_up_clicks:
-        response = requests.post('http://localhost:5000/signup', json={
+        response = requests.post('http://127.0.0.1:5000/signup', json={
             'username': username,
             'password': password
         })
         return response.text
     elif sign_in_clicks:
-        response = requests.post('http://localhost:5000/signin', json={
+        response = requests.post('http://127.0.0.1:5000/signin', json={
             'username': username,
             'password': password
         })

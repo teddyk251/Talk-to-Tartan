@@ -4,3 +4,5 @@ pymongo
 werkzeug
 Flask-Cors
 requests
+grpcio
+grpcio-tools

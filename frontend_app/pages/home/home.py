@@ -147,7 +147,7 @@ layout = dmc.Box(
                     children=[
                         dmc.NavLink(
                         label="Chat with Tartan Now!",
-                        href='/talkToTartan',
+                        href='/coursePlan',
                         leftSection=iconify(icon="fluent-mdl2:chat-bot", width = 20),
                         style=ButtonStyle,
                         variant="filled"

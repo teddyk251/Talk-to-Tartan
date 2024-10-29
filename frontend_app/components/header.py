@@ -1,6 +1,6 @@
 import dash_mantine_components as dmc
 from utils.helpers import iconify
-
+from dash import Output, Input, callback
 
 def header():
     return dmc.Group(
@@ -39,28 +39,30 @@ def header():
                                 dmc.MenuDropdown(
                                     [
                                         dmc.MenuItem(
-                                              dmc.NavLink(
+                                            dmc.NavLink(
                                                 label="Login",
                                                 href='/login',
                                                 rightSection=iconify(icon="solar:login-outline", width = 20),
                                             ),
                                         ),
                                         dmc.MenuItem(
-                                              dmc.NavLink(
+                                            dmc.NavLink(
                                                 label="Register",
                                                 href='/register',
                                                 rightSection=iconify(icon="mdi:register-outline", width = 20),
                                             ),
-                                            ),
+                                        ),
                                         dmc.MenuItem(
-                                              dmc.NavLink(
-                                                label="Logout",
-                                                href='/logout',
-                                                rightSection=iconify(icon="hugeicons:login-01", width = 20),
+                                            dmc.Button(
+                                                "Logout",
+                                                id='logout-button',  # Set the ID for the button
+                                                n_clicks=0,
+                                                rightSection=iconify(icon="hugeicons:login-01", width=20),
+                                                style={"color": "red"},  # Optional styling
                                             ),
                                         ),
-                                           dmc.MenuItem(
-                                              dmc.NavLink(
+                                        dmc.MenuItem(
+                                                dmc.NavLink(
                                                 id = 'color-scheme-toggle',
                                                 n_clicks=0, 
                                                 rightSection=iconify(icon="ic:baseline-light-mode",  color='100%'),

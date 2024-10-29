@@ -1,6 +1,7 @@
 import os
 import json
 import dash_mantine_components as dmc
+import dash
 
 # Dash Imports
 from dash import (
@@ -17,10 +18,16 @@ from appconfig import stylesheets
 
 _dash_renderer._set_react_version("18.2.0")
 
+# external JavaScript files
+external_scripts = [
+    'http://localhost:8000/copilot/index.js'
+]
+
 
 app = Dash(
     __name__, use_pages=True,
     external_stylesheets=stylesheets,
+    # external_scripts=external_scripts
 )
 
 app.layout = dmc.MantineProvider(
@@ -34,6 +41,8 @@ app.layout = dmc.MantineProvider(
                 dmc.AppShellHeader(header()),
                 dmc.AppShellNavbar(sidebar, withBorder=True),
                 dmc.AppShellMain(page_container),
+                dcc.Store(id='login-status', data=None, storage_type='session'),  # For tracking login status
+                dcc.Store(id='registration-status', data=None, storage_type='session'),  # For tracking registration status
             ]
         )
     ]   
@@ -41,10 +50,43 @@ app.layout = dmc.MantineProvider(
 
 
 @callback(
+    [Output('login-status', 'data', allow_duplicate=True),
+    Output('registration-status', 'data', allow_duplicate=True)],
+    Input('logout-button', 'n_clicks'),
+    prevent_initial_call=True
+)
+def logout_callback(logout_click: int):
+
+    if logout_click > 0:
+        return {'status': 'logged_out'}, {'status': 'logged_out'}
+    else:
+        return dash.no_update, dash.no_update
+
+
+@callback(
+    Output('url', 'pathname'),
+    Input('login-status', 'data'),
+    State('registration-status', 'data'),
+    prevent_initial_call=True
+)
+def update_url(login_status: dict, registration_status: dict):
+
+    # Redirect to the login page if registration was successful
+    if registration_status and registration_status['status'] == 'registration_success':
+        return '/login'
+    
+    # Check if the login was successful
+    if login_status and login_status['status'] == 'login_success':
+        return '/coursePlan' # Redirect to the talkToTartan page
+    elif login_status and login_status['status'] == 'logged_out':
+        return '/logout'
+    
+
+@callback(
     Output('avatar-indicator', 'children'),
     Input("url", "pathname"),
 )
-def update_user_initials(url):
+def update_user_initials(url: str):
     user =''
     image=''
     size=0
@@ -77,6 +119,7 @@ def update_user_initials(url):
         )
     return  status
 
+
 clientside_callback(
     ClientsideFunction(
         namespace='clientside',
@@ -89,6 +132,8 @@ clientside_callback(
     Input("color-scheme-toggle", "n_clicks")
 
 )
+
+
 clientside_callback(
     ClientsideFunction(
         namespace='clientside',

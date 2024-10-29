@@ -6,7 +6,10 @@ from utils.helpers import iconify
 from dash_iconify import DashIconify
 
 from dash import Output, Input, State, callback
+from dash import callback_context as ctx
 
+
+from backend_client import sign_in_user
 
 dash.register_page(__name__)
 
@@ -65,35 +68,58 @@ layout = dmc.Center(
         ]
     ),
     dmc.NotificationProvider(),
-    html.Div(id="notifications-container", children=[])]
+    html.Div(id="sign-in-notifications-container", children=[])]
 )
 
 
 @callback(
-    [Output(component_id="url", component_property="pathname"),
-     Output(component_id="notifications-container", component_property="children")],
+    [Output(component_id="login-status", component_property="data", allow_duplicate=True),
+     Output(component_id="sign-in-notifications-container", component_property="children")],
     Input('login-button', 'n_clicks'),
     State('id-input', 'value'),
     State('password-input', 'value'),
     prevent_initial_call=True
 )
-def handle_login(n_clicks, id, password):
-    url = "/login"
-    notification = None
+def handle_login(login_click: int, id: str, password: str):
 
     # Check if the login button is clicked
-    if n_clicks > 0:
+    if login_click > 0:
+
+        notification = None
+        login_status = None
+
+        payload = {
+            "andrew_ID": id,
+            "password": password
+        }
+
         if id and password:  # If both email and password are provided
-            url = "/talkToTartan"
-            notification = dmc.Notification(
-                title="Login Successful",
-                id="simple-notify",
-                action="show",
-                color="green",
-                message="Redirecting...",
-                icon=DashIconify(icon="ic:round-check"),
-            )
-        else:  # If fields are missing
+
+            response = sign_in_user(payload)
+            response_json = response.json()
+
+            if response.status_code == 200:
+
+                login_status = {'status': 'login_success'}
+
+                notification = dmc.Notification(
+                    title="Login Successful",
+                    id="simple-notify",
+                    action="show",
+                    color="green",
+                    message=response_json["message"],
+                    icon=DashIconify(icon="ic:round-check"),
+                )
+            else:
+                notification = dmc.Notification(
+                    title="Login Unsuccessful",
+                    id="simple-notify",
+                    action="show",
+                    color="red",
+                    message=response_json["message"],
+                    icon=DashIconify(icon="ic:round-error"),
+                )
+        else:  # If fields are missing # TODO: Make sure to verify and edit this else block
             notification = dmc.Notification(
                 title="Login Unsuccessful",
                 id="simple-notify",
@@ -103,4 +129,6 @@ def handle_login(n_clicks, id, password):
                 icon=DashIconify(icon="ic:round-error"),
             )
 
-    return url, notification
+        return login_status, notification
+    
+    return dash.no_update, dash.no_update

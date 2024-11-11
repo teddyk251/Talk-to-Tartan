@@ -1,7 +1,16 @@
-chainlit==1.2.0
-langchain==0.3.3
-langchain_community==0.3.2
-langchain_core==0.3.12
-langchain_openai==0.2.2
-python-dotenv==1.0.1
-faiss-cpu==1.8.0
+# chainlit==1.2.0
+# langchain==0.3.3
+# langchain_community==0.3.2
+# langchain_core==0.3.12
+# langchain_openai==0.2.2
+# python-dotenv==1.0.1
+# faiss-cpu==1.8.0
+
+# Alternative
+chainlit
+langchain
+langchain_community
+langchain_core
+langchain_openai
+python-dotenv
+faiss-cpu

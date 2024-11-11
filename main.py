@@ -22,6 +22,8 @@ from langchain_community.document_loaders import CSVLoader
 from langchain_community.vectorstores import FAISS
 from langchain.tools.retriever import create_retriever_tool
 from langchain_community.document_loaders import PyPDFDirectoryLoader
+from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_core.tools import tool
 import logging
 
 # Configure logging
@@ -33,6 +35,9 @@ from helper import process_data, initialize_vector_store
 # Global variables
 current_user = None
 chain_setup_complete = False
+
+available_courses = [] ## Actual Catalogue
+
 
 # Load environment variables
 load_dotenv()
@@ -60,6 +65,7 @@ def get_user_info():
         if user_info['andrew_id']:  # Only return if we got actual user data
             logging.info(f"Successfully retrieved user info: {user_info}")
             current_user = user_info
+            print(user_info)
             return user_info
             
     except Exception as e:
@@ -108,6 +114,11 @@ def get_personalized_system_prompt():
 
     3. **student_handbook tool**:
        - Use this tool this tool to answer questions on degrees requirements, graduation policies, and other questions related to CMU-Africa.
+    4. **Filter Your recommendations**:
+       - We have courses offered in the "Spring" semester and those offered in the "Fall" semester. Always recommend relevant courses. For example., If the {current_user['profile']} indicates that they are in the 'Spring' semester, DO NOT recommend courses in the 'Fall' semester. 
+       Further, if the {current_user['profile']} indicates that they are in the 'Fall' semester, DO NOT recommend courses in the 'Spring' semester.
+       - Check the {current_user['profile']} to determine courses that the student has already taken. If the student has already taken a course, DO NOT recommend it again.
+       - Before recommending a course, check the {current_user['profile']} to determine if they have fulfilled the prerequisites for the course. If they have, recommend the course. If not, clearly state the prerequisites of the course. 
     """
 
 # Initialize components
@@ -164,7 +175,31 @@ handbook_retriever_tool = create_retriever_tool(
     "student_handbook",
     "Search for information about official information on degree programs, academic policies, and general requirements at CMU-Africa , you must use this tool!",
 )
+###################################################################################################################################
+######################################### RECOMMENDATION FILTER TOOL ###########################################################################
+# Form the schema of the tool
+# class Course_Determiner(BaseModel):
+#     '''Inputs to the model'''
+#     user_info: dict = Field(description="The students information")
+#     course_list: list = Field(description="The list of courses available in the catalogue")
+#     desc = ("Use this tool when you need to determine which courses to recommend to the student"
+#             "You will be getting user information to use in recommending courses"
+#             "To use this tool, you must provide students name,  Current year of study, Current semester of study (fall/spring) ", "courses taken")
 
+# @tool ("RecommendationFilterTool", args_schema = Course_Determiner, return_direct = True)
+# def get_filtered_recomendation(recomended_courses):
+#     global current_user, available_courses
+#     if current_user:
+#         try:
+#             user_name = user_info['']
+#             user_year = user_info['']
+#             program_of_study = user_info['']
+#             user_semester = user_info['']
+#             courses_taken = user_info['']
+#         except(KeyError,TypeError):
+#             return f"Error: Could not retrieve students information !"
+#     if user_semester == 'Fall':
+        
 @cl.on_chat_start
 async def setup_chain():
     global current_user

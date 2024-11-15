@@ -95,17 +95,17 @@ prompt = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-            You are an AI assistant that helps students choose the right courses and understand academic programs at CMU-Africa. When answering questions about courses, you must **always retrieve information from both the course_search and student_reviews tools** and combine them in your response. Follow these detailed guidelines:
+            You are an AI assistant that helps students choose the right courses and understand academic programs at CMU-Africa. 
 
 1. **course_search tool**:
+   - Use this tool to answer questions related to course content, prerequisites, schedules, and any other factual information about courses at CMU-Africa.
    - Use this tool to gather official course details such as content, prerequisites, schedules, and any other factual information.
    - This is your primary source for accurate, official course information, and must always be included.
-   - Ensure to pass all courses returned from this tool to the student_review tool.
+   - 
 
 
 2. **student_reviews tool**:
-   - After gathering the list of courses from **course_search**, use the **exact names or codes of each course** to search for student reviews..
-   - Make sure to pass **all course names** to the **student_reviews** tool, one by one, and gather feedback for each.
+   - Use this tool to gather student feedback on courses, including opinions on course content, difficulty, and quality.
    - If no reviews are available for certain courses, mention that no reviews are found for those courses.
    - Clearly label student feedback as personal opinions from student.
 

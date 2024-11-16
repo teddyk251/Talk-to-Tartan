@@ -108,6 +108,11 @@ def get_personalized_system_prompt():
 
     3. **student_handbook tool**:
        - Use this tool this tool to answer questions on degrees requirements, graduation policies, and other questions related to CMU-Africa.
+       
+    4. **add_remove_course tool**:
+         - Use this tool to add or remove courses from the list of courses that the student is interested in.
+        -  The input should be formatted as 'add <course_code>' to add a course or 'remove <course_code>' to remove a course.
+         
     """
 
 # Initialize components
@@ -165,6 +170,41 @@ handbook_retriever_tool = create_retriever_tool(
     "Search for information about official information on degree programs, academic policies, and general requirements at CMU-Africa , you must use this tool!",
 )
 
+###################################################################################################################################
+################################## ADD REMOVE COURSE TOOL ########################################################################
+
+course_list = []
+
+def add_course(course_code):
+    global course_list
+    course_list.append(course_code)
+    return f"Course {course_code} has been added to your list of courses. list of courses: {course_list}"
+
+def remove_course(course_code):
+    global course_list
+    if course_code in course_list:
+        course_list.remove(course_code)
+        return f"Course {course_code} has been removed from your list of courses. list of courses: {course_list}"
+    else:
+        return f"Course {course_code} is not in your list of courses. list of courses: {course_list}"
+    
+from langchain_core.tools import tool
+
+@tool
+def add_remove_course_tool(input: str):
+    """Tool to add or remove a course from the global list.
+    The input should be formatted as 'add <course_code>' or 'remove <course_code>'.
+    """
+    
+    action, course_code = input.split(" ", 1)
+    if action.lower() == "add":
+        return add_course(course_code)
+    elif action.lower() == "remove":
+        return remove_course(course_code)
+    else:
+        return "Invalid Command. Please use 'add <course_code>' or 'remove <course_code>'."
+    
+
 @cl.on_chat_start
 async def setup_chain():
     global current_user
@@ -180,7 +220,7 @@ async def setup_chain():
         await cl.Message(welcome_message).send()
 
         llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-3.5-turbo")
-        tools = [course_retriever_tool, student_reviews_retriever_tool, handbook_retriever_tool]  # Added handbook tool
+        tools = [course_retriever_tool, student_reviews_retriever_tool, handbook_retriever_tool,add_remove_course_tool]  # Added handbook tool
         llm_with_tools = llm.bind_tools(tools)
 
         prompt = ChatPromptTemplate.from_messages([

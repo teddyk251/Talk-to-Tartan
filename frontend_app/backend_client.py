@@ -1,6 +1,7 @@
 import requests
 
-BASE_URL = "http://127.0.0.1:5000"  # Flask backend API URL
+# BASE_URL = "http://172.29.104.127:5001"  # Flask backend API URL
+BASE_URL = "http://localhost:5000"  # Flask backend API URL
 
 # Function for sign-up request
 def sign_up_user(payload: dict) -> dict:

@@ -307,7 +307,7 @@ def handle_registration(
             "program": program,
             "interests": interests,
             "previous_experience": prev_exp,
-            "first_semester": first_semester,
+            "first_semester": True if first_semester.lower() == 'yes' else False,
             "completed_semesters": completed_semesters,
             "starting_year": starting_year,
             "number_of_planned_semesters": planned_semesters,
@@ -317,9 +317,16 @@ def handle_registration(
         }
 
         if non_empty_flag:
+
+            print(f"PAYLOAD: {payload}")
             
             response = sign_up_user(payload)
             response_json = response.json()
+
+            # response_json = {
+            #     "message": "Registration successful",
+            #     "status": 201
+            # }
 
             if response.status_code == 201:
 

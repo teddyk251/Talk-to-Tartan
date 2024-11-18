@@ -2,6 +2,7 @@ import os
 import json
 import dash_mantine_components as dmc
 import dash
+import time
 
 # Dash Imports
 from dash import (
@@ -19,6 +20,9 @@ from appconfig import stylesheets
 _dash_renderer._set_react_version("18.2.0")
 
 # external JavaScript files
+# external_scripts = [
+#     'http://172.29.104.127:8000/copilot/index.js'
+# ]
 external_scripts = [
     'http://localhost:8000/copilot/index.js'
 ]
@@ -27,7 +31,7 @@ external_scripts = [
 app = Dash(
     __name__, use_pages=True,
     external_stylesheets=stylesheets,
-    # external_scripts=external_scripts
+    external_scripts=external_scripts
 )
 
 app.layout = dmc.MantineProvider(
@@ -43,6 +47,7 @@ app.layout = dmc.MantineProvider(
                 dmc.AppShellMain(page_container),
                 dcc.Store(id='login-status', data=None, storage_type='session'),  # For tracking login status
                 dcc.Store(id='registration-status', data=None, storage_type='session'),  # For tracking registration status
+                dcc.Store(id='user-profile', data=None, storage_type='session'),  # For tracking registered courses
             ]
         )
     ]   
@@ -66,14 +71,16 @@ def logout_callback(logout_click: int):
 @callback(
     Output('url', 'pathname'),
     Input('login-status', 'data'),
-    State('registration-status', 'data'),
+    Input('registration-status', 'data'),
     prevent_initial_call=True
 )
 def update_url(login_status: dict, registration_status: dict):
 
     # Redirect to the login page if registration was successful
     if registration_status and registration_status['status'] == 'registration_success':
-        return '/login'
+        if not login_status or login_status['status'] != 'login_success':
+            time.sleep(2)
+            return '/login'
     
     # Check if the login was successful
     if login_status and login_status['status'] == 'login_success':

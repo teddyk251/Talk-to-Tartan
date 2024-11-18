@@ -74,7 +74,8 @@ layout = dmc.Center(
 
 @callback(
     [Output(component_id="login-status", component_property="data", allow_duplicate=True),
-     Output(component_id="sign-in-notifications-container", component_property="children")],
+     Output(component_id="sign-in-notifications-container", component_property="children"),
+     Output(component_id="user-profile", component_property="data")],
     Input('login-button', 'n_clicks'),
     State('id-input', 'value'),
     State('password-input', 'value'),
@@ -110,6 +111,10 @@ def handle_login(login_click: int, id: str, password: str):
                     message=response_json["message"],
                     icon=DashIconify(icon="ic:round-check"),
                 )
+
+                profile = get_dummy_profile()
+
+
             else:
                 notification = dmc.Notification(
                     title="Login Unsuccessful",
@@ -119,6 +124,9 @@ def handle_login(login_click: int, id: str, password: str):
                     message=response_json["message"],
                     icon=DashIconify(icon="ic:round-error"),
                 )
+
+                profile = None
+
         else:  # If fields are missing # TODO: Make sure to verify and edit this else block
             notification = dmc.Notification(
                 title="Login Unsuccessful",
@@ -129,6 +137,43 @@ def handle_login(login_click: int, id: str, password: str):
                 icon=DashIconify(icon="ic:round-error"),
             )
 
-        return login_status, notification
+            profile = None
+
+        return login_status, notification, profile
     
-    return dash.no_update, dash.no_update
+    return dash.no_update, dash.no_update, dash.no_update
+
+
+import random
+def get_dummy_profile():
+
+    sign_up = {
+        "first_name": "John Doe",
+        "andrew_ID": "johndoe",
+        "password": "password",
+        "program": "MSIT",
+        "interests": "I am interested in AI and ML",
+        "previous_experience": "I have a BSc in Computer Science",
+        "first_semester": False,
+        "completed_semesters": 2,
+        "starting_year": 2021,
+        "number_of_planned_semesters": 4,
+        "courses": {
+            "semesters": [
+                {
+                    "semester": i + 1,
+                    "courses": [
+                        {
+                            "course_name": f"Course {j + 1}",
+                            "course_code": f"{random.choice(['10', '15', '18', '11'])}-{random.randint(100, 999)}",
+                            "units": random.choice([6, 12])
+                        }
+                        for j in range(4)  # 4 courses per semester
+                    ]
+                }
+                for i in range(4)  # 4 semesters
+            ]
+        }
+    }
+
+    return sign_up

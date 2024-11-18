@@ -156,20 +156,31 @@ def get_personalized_system_prompt(user_info):
     6. **export_degree_plan tool**:
        - Use this tool if the user requests to export their degree plan.
        - Export the degree plan in an Excel format that contains all the relevant course information, including semester, year, units, and course titles.
+    
+    7. **remove_course_from_plan tool**:
+   - If the user asks to remove a course from their degree plan, remove the specified course from the indicated semester.
+   - The input should be formatted as `<course_code> semester <semester_id>`.
+
     """
 
 # Define the tools
 def filter_prerequisites(prerequisites):
-    course_code_pattern = r'\b\d{2}-\d{3}\b'
+    course_code_pattern = r'\b\d{2}-\d{3}(-[A-Za-z])?\b'  # Updated pattern to match 'xx-xxx' and 'xx-xxx-lx'
     filtered_prerequisites = []
-    for prereq in prerequisites:
-        # Find all course codes in the prerequisite string
-        valid_codes = re.findall(course_code_pattern, prereq)
-        # Add to list if valid course codes are found, otherwise skip (empty list)
-        if valid_codes:
-            filtered_prerequisites.extend(valid_codes)
+    
+    # Check if prerequisites is a valid list
+    if isinstance(prerequisites, list):
+        for prereq in prerequisites:
+            # Skip if the prerequisite is NaN (not a number) or is an invalid type
+            if isinstance(prereq, float) and math.isnan(prereq):
+                continue  # Skip this entry
+            
+            # Check if the prerequisite is a valid string matching the course code format
+            valid_codes = re.findall(course_code_pattern, prereq)
+            if valid_codes:
+                filtered_prerequisites.extend(valid_codes)
+    
     return filtered_prerequisites
-
 @tool
 def validate_course_addition(input: str) -> str:
     """Validates if a course can be added to the specified semester in the degree plan."""
@@ -177,7 +188,7 @@ def validate_course_addition(input: str) -> str:
     try:
         # Extract course code and semester from input
         parts = input.split("semester")
-        course_code = parts[0].strip()
+        course_code = parts[0].strip().upper()
         semester = int(parts[1].strip())
         #print(f'Starting validation for course {course_code} in semester {semester}')
         print(f"Course code: {course_code}, Semester: {semester}")
@@ -194,11 +205,13 @@ def validate_course_addition(input: str) -> str:
         
 
         # Extract course information from validator dataset
-        print('HERE 1')
+        #print('HERE 1')
         course_data = next(course for course in validator.courses_df.to_dict('records') if course['course_code'] == course_code)
-        print('HERE 2')
+        #print('HERE 2')
         prereq = course_data.get('Prerequisites', [""])
-        print('HERE 3')
+        #print('HERE 3')
+        if not isinstance(prereq, list):
+            prereq = [prereq] if isinstance(prereq, str) else []
         course = Course(
             course_code=course_data['course_code'],
             course_name=course_data['course_name'],
@@ -207,7 +220,7 @@ def validate_course_addition(input: str) -> str:
             prerequisites=filter_prerequisites(prereq),
             program=course_data['Course discipline']
         )
-        print('HERE 4')
+        #print('HERE 4')
         print("Course data extracted")
 
         prerequisites = course.prerequisites
@@ -248,17 +261,19 @@ def validate_course_addition(input: str) -> str:
 
 
         # Check if the course exceeds the maximum units allowed per semester
-        print("Checking max units")
-        print(f"Degree plan {degree_plan}")
-        print(f"Semesters {degree_plan.semesters}")
-        print(f"current Semester {semester}")
-        print(type(degree_plan.semesters[0].total_units))
+        #print("Checking max units")
+        #print(f"Degree plan {degree_plan}")
+        #print(f"Semesters {degree_plan.semesters}")
+        #print(f"current Semester {semester}")
+        #print(type(degree_plan.semesters[0].total_units))
         max_units_per_semester = 54
         for sem in degree_plan.semesters:
             print(f"Semester {sem.semester} - ")
-            if sem.semester.lower() == semester.lower():
+            if sem.semester == semester:
                 print("Semester found")
                 total_units = sem.total_units
+                print(f"Total units: {type(total_units)}")
+                print({type(course.units)})
                 print(f"Total units in semester {semester}: {total_units}")
                 print(f"Total units type {type(total_units)}")
                 if total_units + course.units > max_units_per_semester:
@@ -280,9 +295,13 @@ def validate_course_addition(input: str) -> str:
         return f"Error validating course addition: {str(e)}"
 
 @tool
-def add_course_to_plan(course_code: str, semester: str) -> str:
+def add_course_to_plan(input: str) -> str:
     """Adds a validated course to the specified semester in the degree plan."""
     try:
+        parts = input.split("semester")
+        course_code = parts[0].strip().upper()
+        semester = int(parts[1].strip())
+        print(f"Adding course {course_code} to semester {semester}")
         # Retrieve the degree plan from the session
         degree_plan = cl.user_session.get("degree_plan")
 
@@ -302,7 +321,7 @@ def add_course_to_plan(course_code: str, semester: str) -> str:
         # Locate the appropriate semester in the degree plan
         semester_found = False
         for sem in degree_plan.semesters:
-            if sem.semester.lower() == semester.lower():
+            if sem.semester == semester:
                 sem.courses.append(course)
                 semester_found = True
                 break
@@ -319,6 +338,54 @@ def add_course_to_plan(course_code: str, semester: str) -> str:
 
     except Exception as e:
         return f"Error adding course {course_code}: {str(e)}"
+
+@tool
+def remove_course_from_plan(input:str):
+    """Removes a course from the specified semester in the degree plan."""
+    try:
+        parts = input.split("semester")
+        course_code = parts[0].strip().upper()
+        semester = int(parts[1].strip())
+        print(f"Removing course {course_code} from semester {semester}")
+        # Retrieve the degree plan from the session
+        degree_plan = cl.user_session.get("degree_plan")
+
+        # Locate the course from the course catalog
+        validator = cl.user_session.get("validator")
+        course_data = next(course for course in validator.courses_df.to_dict('records') if course['course_code'] == course_code)
+        course = Course(
+            course_code=course_data['course_code'],
+            course_name=course_data['course_name'],
+            units=course_data['course_units'],
+            semester_availability=course_data['course_semester'],
+            prerequisites=course_data.get('Prerequisites', ""),
+            program=course_data['Course discipline']
+        )
+
+        # Locate the appropriate semester in the degree plan
+        semester_found = False
+        for sem in degree_plan.semesters:
+            if sem.semester == semester:
+                # Remove the course from the semester
+                for c in sem.courses:
+                    if c.course_code == course_code:
+                        sem.courses.remove(c)
+                        semester_found = True
+                        break
+                
+        if not semester_found:
+            return f"Semester {semester} not found in the degree plan. No changes were made."
+
+        # Save updated degree plan in the session
+        cl.user_session.set("degree_plan", degree_plan)
+
+        return f"Course {course_code} ({course.course_name}) has been successfully removed from {semester}."
+
+    except Exception as e:
+        return f"Error removing course {course_code}: {str(e)}"
+
+
+
 
 @tool
 def show_degree_plan() -> str:
@@ -449,7 +516,8 @@ async def setup_chain():
             add_course_to_plan,
             show_degree_plan,
             validate_full_degree_plan,
-            export_degree_plan
+            export_degree_plan,
+            remove_course_from_plan
         ]
 
         llm_with_tools = llm.bind_tools(tools)

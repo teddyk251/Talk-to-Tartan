@@ -147,8 +147,7 @@ def get_personalized_system_prompt(user_info):
 
     4. **validate_course_addition tool**:
        - If the user asks to add a course to their degree plan, validate whether this course can be added to the specified semester.
-       - Always validate before confirming the addition of a course.
-       - Report any issues if the course cannot be added due to prerequisites, unit limits, or other constraints.
+       - The input should be formatted as '<course_code> semester <semester_id>' 
 
     5. **validate_full_degree_plan tool**:
        - Use this tool when the user wants to check if their full degree plan meets all graduation requirements.
@@ -172,15 +171,27 @@ def filter_prerequisites(prerequisites):
     return filtered_prerequisites
 
 @tool
-def validate_course_addition(course_code: str, semester: str) -> str:
+def validate_course_addition(input: str) -> str:
     """Validates if a course can be added to the specified semester in the degree plan."""
     
     try:
+        # Extract course code and semester from input
+        parts = input.split("semester")
+        course_code = parts[0].strip()
+        semester = int(parts[1].strip())
+        #print(f'Starting validation for course {course_code} in semester {semester}')
+        print(f"Course code: {course_code}, Semester: {semester}")
+        print(f"Course code type: {type(course_code)}, Semester type: {type(semester)}")
+        
+        
+        
         degree_plan = cl.user_session.get("degree_plan")
         if not degree_plan:
             return "No degree plan found in the session. Please create or load a degree plan first."
 
         validator = cl.user_session.get("validator")
+        
+        
 
         # Extract course information from validator dataset
         print('HERE 1')
@@ -213,10 +224,10 @@ def validate_course_addition(course_code: str, semester: str) -> str:
         print("Passed prerequisites check")
         # Check if the course is already added to the degree plan
         for sem in degree_plan.semesters:
-            print(f"split {semester.split(' ')}")
-            semester = semester.split(" ")[1]
-            print(f"Semester {sem.semester} - {int(semester)}")
-            if sem.semester == int(semester):
+            #print(f"split {semester.split(' ')}")
+            #semester = semester.split(" ")[1]
+            #print(f"Semester {sem.semester} - {int(semester)}")
+            if sem.semester == semester:
                 if course_code in [c.course_code for c in sem.courses]:
                     return f"Course {course_code} is already added to {semester}."
         print("Passed course already added check")
@@ -224,11 +235,11 @@ def validate_course_addition(course_code: str, semester: str) -> str:
         # Check if the course is available in the specified semester
         # Add logic to convert odd and even semesters to Fall and Spring
         # If semester 1 -> Fall, semester 2 -> Spring , semester 3 -> Fall, etc.
-        print(f"Semester --> {semester}")
+        #print(f"Semester --> {semester}")
         # if "sem" in semester.lower():
         #     semester = semester.split(" ")[1]
         # else:
-        semester_number = int(semester)
+        semester_number = semester
         semester_type = "Fall" if semester_number % 2 == 1 else "Spring"
         if semester_type not in course.semester_availability:
             return f"The course {course_code} is not available in {semester}. It is offered in {', '.join(course.semester_availability)}."

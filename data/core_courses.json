@@ -1,0 +1,24 @@
+{
+    "MSIT": {
+      "core_courses": [
+        {"course_code": "04-611", "course_name": "Strategic Use of Information in Enterprises", "units": 12},
+        {"course_code": "04-630", "course_name": "Data Structures and Algorithms", "units": 12},
+        {"course_code": "18-785", "course_name": "Data Inference and Applied Machine Learning", "units": 12},
+        {"course_code": "18-631", "course_name": "Introduction to Information Security", "units": 12},
+        {"course_code": "04-601", "course_name": "First Year Seminar", "units": 6}
+      ]
+    },
+    "MSECE": {
+      "core_courses": [
+        {"course_code": "18-XXX", "course_name": "Advanced ECE Core Course 1", "units": 12},
+        {"course_code": "18-YYY", "course_name": "Advanced ECE Core Course 2", "units": 12}
+      ]
+    },
+    "MSEAI": {
+      "core_courses": [
+        {"course_code": "04-XXX", "course_name": "Math Fundamentals", "units": 12},
+        {"course_code": "04-YYY", "course_name": "Intro to AI", "units": 12}
+      ]
+    }
+  }
+  

@@ -190,13 +190,8 @@ def validate_course_addition(course_code: str, semester: str) -> str:
         validator = cl.user_session.get("validator")
         course_code = course_code.upper()
         # Extract course information from validator dataset
-        # print('HERE 1')
         course_data = next(course for course in validator.courses_df.to_dict('records') if course['course_code'] == course_code)
-        # print('HERE 2')
         prereq = course_data.get('Prerequisites', [""])
-        # print('HERE 3')
-        # print(f"Course data {course_data}")
-        # print(f"Filter prereq - {filter_prerequisites(prereq)}")
         course = Course(
             course_code=course_data['course_code'],
             course_name=course_data['course_name'],
@@ -205,11 +200,8 @@ def validate_course_addition(course_code: str, semester: str) -> str:
             prerequisites=filter_prerequisites(prereq),
             program=course_data['Course discipline']
         )
-        # print('HERE 4')
-        # print("Course data extracted")
 
         prerequisites = course.prerequisites
-        # if prerequisites :
         if prerequisites is None or (isinstance(prerequisites, float) and math.isnan(prerequisites)):
             pass
         else:

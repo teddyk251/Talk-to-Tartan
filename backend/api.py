@@ -189,7 +189,8 @@ def sign_up():
                 'type': 'object',
                 'properties': {
                     'andrew_ID': {'type': 'string'},
-                    'password': {'type': 'string'}
+                    'password': {'type': 'string'},
+                    'profile': {'type': 'object'}
                 }
             }
         }

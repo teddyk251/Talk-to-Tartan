@@ -242,7 +242,7 @@ def sign_in():
             return jsonify({
                 'message': 'Login successful!', 
                 'user': user['andrewID'],
-                'profile':data
+                'profile': user['profile']
             }), 200
 
         return jsonify({'message': 'Invalid credentials!'}), 401

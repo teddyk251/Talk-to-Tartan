@@ -28,7 +28,7 @@ class SemesterPlan:
     
     @property
     def total_units(self) -> int:
-        return sum(course.units for course in self.courses)
+        return sum(int(course.units) for course in self.courses)
 
 @dataclass
 class DegreePlan:

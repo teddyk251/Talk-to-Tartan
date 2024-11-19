@@ -47,3 +47,26 @@ class DegreePlan:
             completed.update(course.course_code for course in semester.courses)
         print(f"Completed courses in the degree plan: {completed}")
         return completed
+    
+    def to_dict(self) -> Dict:
+        return {
+            "student_id": self.student_id,
+            "program": self.program.value,
+            "semesters": [
+                {
+                    "semester": sem.semester,
+                    "courses": [
+                        {
+                            "course_code": course.course_code,
+                            "course_name": course.course_name,
+                            "units": course.units,
+                            "semester_availability": course.semester_availability,
+                            "prerequisites": course.prerequisites,
+                            "program": course.program
+                        }
+                        for course in sem.courses
+                    ]
+                }
+                for sem in self.semesters
+            ]
+        }

@@ -34,22 +34,42 @@ class UserService(user_pb2_grpc.UserServiceServicer):
     def GetUser(self, request, context):
         logger.info("GetUser called - waiting for user info from queue")
         try:
-            while True:  # Keep trying to get user info
-                try:
-                    user_info = user_queue.get(timeout=5)  # 5 second timeout
-                    logger.info(f"Retrieved user info from queue: {user_info}")
+            # while True:  # Keep trying to get user info
+            #     try:
+            #         user_info = user_queue.get(timeout=5)  # 5 second timeout
+            #         logger.info(f"Retrieved user info from queue: {user_info}")
                     
-                    # Create the response
-                    response = user_pb2.UserInfo(
-                        first_name=user_info.get('first_name', ''),
-                        andrew_id=user_info.get('andrew_id', ''),
-                        profile_json=json.dumps(user_info.get('profile', {}))
-                    )
-                    logger.info(f"Sending response: {response}")
-                    return response
-                except user_queue.empty:
-                    logger.debug("Queue empty, waiting for user info...")
-                    continue
+            #         # Create the response
+            #         response = user_pb2.UserInfo(
+            #             first_name=user_info.get('first_name', ''),
+            #             andrew_id=user_info.get('andrew_id', ''),
+            #             profile_json=json.dumps(user_info.get('profile', {}))
+            #         )
+            #         logger.info(f"Sending response: {response}")
+            #         return response
+            #     except user_queue.empty:
+            #         logger.debug("Queue empty, waiting for user info...")
+            #         continue
+            if not user_queue.empty():
+                user_info = user_queue.get_nowait()  # Non-blocking retrieval
+                logger.info(f"User info retrieved from queue: {user_info}")
+                # Create and return the response
+                logger.info(f"Retrieved user info from queue: {user_info}")
+                    
+                print(f"User INFO - {user_info}")    # Create the response
+                response = user_pb2.UserInfo(
+                    first_name=user_info.get('first_name', ''),
+                    andrew_id=user_info.get('andrew_id', ''),
+                    profile_json=json.dumps(user_info.get('profile', {}))
+                )
+                logger.info(f"Sending response: {response}")
+                return response
+            else:
+                logger.warning("Queue is empty. No user info available.")
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_details("No user info available in the queue.")
+                return user_pb2.UserInfo()
+
         except Exception as e:
             logger.error(f"Error in GetUser: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
@@ -233,8 +253,8 @@ def sign_in():
             logging.info(f"User authenticated successfully. Putting user info in queue: {user_info}")
             
             # Clear the queue before putting new user info
-            while not user_queue.empty():
-                user_queue.get()
+            # while not user_queue.empty():
+            #     user_queue.get()
             
             user_queue.put(user_info)
             logging.info(f"Queue size after put: {user_queue.qsize()}")

@@ -119,6 +119,68 @@ async def wait_for_user_login():
         await asyncio.sleep(1)  # Use asyncio.sleep instead of time.sleep
     return user_info
 
+async def poll_for_user_sign_in():
+    while True:
+        user_info = get_user_info()
+        if user_info:
+            logging.info(f"User signed in: {user_info}")
+            cl.user_session.set("user_info", user_info)
+
+            # Initialize degree plan and validator
+            degree_plan = convert_user_info_to_degree_plan(user_info)
+            cl.user_session.set("degree_plan", degree_plan)
+            cl.user_session.set("validator", DegreeValidator(COURSE_DATA_PATH))
+
+            # Initialize LLM tools and chain
+            llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4", temperature=0)
+            tools = [
+                course_retriever_tool,
+                student_reviews_retriever_tool,
+                handbook_retriever_tool,
+                validate_course_addition,
+                add_course_to_plan,
+                remove_course_from_plan,
+                validate_full_degree_plan,
+                export_degree_plan,
+                show_degree_plan
+            ]
+            llm_with_tools = llm.bind_tools(tools)
+
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", get_personalized_system_prompt(user_info)),
+                MessagesPlaceholder(variable_name="chat_history"),
+                ("user", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ])
+
+            agent = (
+                {
+                    "input": lambda x: x["input"],
+                    "agent_scratchpad": lambda x: format_to_openai_tool_messages(
+                        x["intermediate_steps"]
+                    ),
+                    "chat_history": lambda x: x["chat_history"]
+                }
+                | prompt
+                | llm_with_tools
+                | OpenAIToolsAgentOutputParser()
+            )
+
+            # Initialize agent executor
+            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+            cl.user_session.set("llm_chain", agent_executor)
+
+            logging.info("Session fully initialized.")
+
+            # Send a welcome message
+            welcome_message = f"Welcome {user_info['first_name']}! I see you're a {user_info['profile']['program']} student interested in {user_info['profile']['interests']}. How can I help you today?"
+            await cl.Message(welcome_message).send()
+            return  # Stop polling after successful sign-in
+
+        logging.info("Waiting for user sign-in...")
+        await asyncio.sleep(5)
+
+
 # Get personalized system prompt function
 def get_personalized_system_prompt(user_info):
     return f"""You are an AI assistant helping {user_info['first_name']}, a {user_info['profile']['program']} student at CMU-Africa. 
@@ -494,16 +556,33 @@ def export_degree_plan() -> str:
 # Chat start event
 @cl.on_chat_start
 async def setup_chain():
-    logging.info("Setting up chain and waiting for user login...")
-    await cl.Message("Waiting for user login...").send()
+    await cl.Message("Chainlit is ready. Please sign in to continue.").send()
+
+    # Start polling for user sign-in
+    await poll_for_user_sign_in()
+
+    # Ensure the session is initialized after polling
+    user_info = cl.user_session.get("user_info")
+    if not user_info:
+        logging.warning("User info not found after polling. Restarting sign-in process.")
+        await cl.Message("Failed to retrieve user info. Please try signing in again.").send()
+    else:
+        logging.info(f"User session initialized: {user_info}")
+
+
+    # logging.info("Setting up chain and waiting for user login...")
+    # await cl.Message("Waiting for user login...").send()
 
     # Wait for user to login and retrieve user info
-    user_info = await wait_for_user_login()
+    # user_info = cl.user_session.get("user_info")
+    # user_info = await wait_for_user_login()
 
-    if user_info:
-        logging.info(f"User info retrieved: {user_info}")
-        welcome_message = f"Welcome {user_info['first_name']}! I see you're a {user_info['profile']['program']} student interested in {user_info['profile']['interests']}. How can I help you today?"
-        await cl.Message(welcome_message).send()
+
+
+    # if user_info:
+        # logging.info(f"User info retrieved: {user_info}")
+        # welcome_message = f"Welcome {user_info['first_name']}! I see you're a {user_info['profile']['program']} student interested in {user_info['profile']['interests']}. How can I help you today?"
+        # await cl.Message(welcome_message).send()
 
         # Initialize LLM and tools
         llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4o", temperature=0)
@@ -546,52 +625,83 @@ async def setup_chain():
         agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
         # Store user info and LLM chain in session
-        cl.user_session.set("user_info", user_info)
+        # cl.user_session.set("user_info", user_info)
         cl.user_session.set("llm_chain", agent_executor)
         degreePlan = convert_user_info_to_degree_plan(user_info)
         cl.user_session.set("degree_plan", degreePlan)
         cl.user_session.set("validator", DegreeValidator(COURSE_DATA_PATH))
-    else:
-        logging.warning("Failed to retrieve user info")
-        await cl.Message("Failed to connect to login service. Please try again later.").send()
+    # else:
+    #     logging.warning("Failed to retrieve user info")
+    #     await cl.Message("Failed to connect to login service. Please try again later.").send()
+    #     raise Exception("User profile retrieval failed. Chainlit cannot start without a user profile.")
 
 # Handles user message input
+# @cl.on_message
+# async def handle_message(message: cl.Message):
+#     llm_chain = cl.user_session.get("llm_chain")
+
+#     if not llm_chain:
+#         await cl.Message("Session not initialized properly. Please refresh the page.").send()
+#         return
+
+#     user_message = message.content.lower()
+
+#     try:
+#         # Show thinking message
+#         thinking_msg = cl.Message(content="Thinking...")
+#         await thinking_msg.send()
+
+#         # Run the chain with async handling
+#         result = await cl.make_async(llm_chain.invoke)({
+#             "input": user_message,
+#             "chat_history": chat_history
+#         })
+
+#         # Remove thinking message
+#         await thinking_msg.remove()
+
+#         # Update chat history
+#         chat_history.extend([
+#             HumanMessage(content=user_message),
+#             AIMessage(content=result["output"]),
+#         ])
+
+#         # Send the actual response
+#         await cl.Message(content=result["output"]).send()
+
+#     except Exception as e:
+#         logging.error(f"Error processing message: {str(e)}")
+#         await cl.Message("An error occurred while processing your message. Please try again.").send()
 @cl.on_message
 async def handle_message(message: cl.Message):
+    user_info = cl.user_session.get("user_info")
     llm_chain = cl.user_session.get("llm_chain")
 
-    if not llm_chain:
-        await cl.Message("Session not initialized properly. Please refresh the page.").send()
+    # Block interaction if user info or llm_chain is not ready
+    if not user_info or not llm_chain:
+        await cl.Message("Session is still initializing. Please wait a moment and try again.").send()
         return
 
-    user_message = message.content.lower()
-
     try:
-        # Show thinking message
+        # Show a "Thinking..." message while processing
         thinking_msg = cl.Message(content="Thinking...")
         await thinking_msg.send()
 
-        # Run the chain with async handling
+        # Process the message through the LLM chain
         result = await cl.make_async(llm_chain.invoke)({
-            "input": user_message,
+            "input": message.content,
             "chat_history": chat_history
         })
 
-        # Remove thinking message
+        # Update chat history and send the result
+        chat_history.extend([HumanMessage(content=message.content), AIMessage(content=result["output"])])
         await thinking_msg.remove()
-
-        # Update chat history
-        chat_history.extend([
-            HumanMessage(content=user_message),
-            AIMessage(content=result["output"]),
-        ])
-
-        # Send the actual response
         await cl.Message(content=result["output"]).send()
-
     except Exception as e:
-        logging.error(f"Error processing message: {str(e)}")
+        logging.error(f"Error processing message: {e}")
         await cl.Message("An error occurred while processing your message. Please try again.").send()
+
+
 
 
 # Wait for user login function
@@ -621,12 +731,25 @@ def get_user_info():
         except:
             pass
 
-async def wait_for_user_login():
-    user_info = None
-    while not user_info:
+# async def wait_for_user_login():
+#     user_info = None
+#     while not user_info:
+#         user_info = get_user_info()
+#         await asyncio.sleep(1)  # Use asyncio.sleep instead of time.sleep
+#     return user_info
+async def wait_for_user_login(timeout=30):
+    retries = timeout
+    while retries > 0:
         user_info = get_user_info()
-        await asyncio.sleep(1)  # Use asyncio.sleep instead of time.sleep
-    return user_info
+        if user_info:
+            logging.info(f"User profile retrieved: {user_info}")
+            return user_info
+        await asyncio.sleep(1)
+        retries -= 1
+        logging.info(f"Retrying user login... {retries} retries left.")
+
+    logging.error("Failed to retrieve user profile after maximum retries.")
+    return None
 
 def convert_user_info_to_degree_plan(user_info) -> DegreePlan:
     semesters = []

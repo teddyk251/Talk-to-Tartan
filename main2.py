@@ -33,6 +33,8 @@ from helper import process_data, initialize_vector_store
 
 # Global variables
 chat_history = []
+addDone = False
+removeDone = False
 
 # Load environment variables
 load_dotenv()
@@ -359,6 +361,9 @@ def validate_course_addition(input: str) -> str:
 @tool
 def add_course_to_plan(input: str) -> str:
     """Adds a validated course to the specified semester in the degree plan."""
+
+    global addDone
+
     try:
         parts = input.split("semester")
         course_code = parts[0].strip().upper()
@@ -396,6 +401,8 @@ def add_course_to_plan(input: str) -> str:
         # Save updated degree plan in the session
         cl.user_session.set("degree_plan", degree_plan)
 
+        addDone = True
+
         return f"Course {course_code} ({course.course_name}) has been successfully added to {semester}."
 
     except Exception as e:
@@ -404,6 +411,9 @@ def add_course_to_plan(input: str) -> str:
 @tool
 def remove_course_from_plan(input:str):
     """Removes a course from the specified semester in the degree plan."""
+
+    global removeDone
+
     try:
         parts = input.split("semester")
         course_code = parts[0].strip().upper()
@@ -440,6 +450,7 @@ def remove_course_from_plan(input:str):
 
         # Save updated degree plan in the session
         cl.user_session.set("degree_plan", degree_plan)
+        removeDone = True
 
         return f"Course {course_code} ({course.course_name}) has been successfully removed from {semester}."
 
@@ -674,6 +685,10 @@ async def setup_chain():
 #         await cl.Message("An error occurred while processing your message. Please try again.").send()
 @cl.on_message
 async def handle_message(message: cl.Message):
+
+    global addDone
+    global removeDone
+
     user_info = cl.user_session.get("user_info")
     llm_chain = cl.user_session.get("llm_chain")
 
@@ -696,7 +711,21 @@ async def handle_message(message: cl.Message):
         # Update chat history and send the result
         chat_history.extend([HumanMessage(content=message.content), AIMessage(content=result["output"])])
         await thinking_msg.remove()
-        await cl.Message(content=result["output"]).send()
+
+        if addDone == False and removeDone == False:
+            # send the actual response
+            await cl.Message(content=result["output"]).send()
+        else:
+            # Retrieve the degree plan from the session
+            degree_plan_dict = cl.user_session.get("degree_plan").to_dict()
+            fn = cl.CopilotFunction(name="planUpdate", args={"user_profile": degree_plan_dict})
+            # fn = cl.CopilotFunction(name="planUpdate", args={"user_profile": {"data": "test"}})
+            addDone = False
+            removeDone = False
+            res = await fn.acall()
+            print(f"RES: {res}")
+            await cl.Message(content=result["output"]).send()
+
     except Exception as e:
         logging.error(f"Error processing message: {e}")
         await cl.Message("An error occurred while processing your message. Please try again.").send()

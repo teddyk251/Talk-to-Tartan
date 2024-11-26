@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Set
+import numpy as np
 
 class Semester(Enum):
     FALL = "Fall"
@@ -46,4 +47,44 @@ class DegreePlan:
         for semester in self.semesters:
             completed.update(course.course_code for course in semester.courses)
         print(f"Completed courses in the degree plan: {completed}")
-        return completed
+        return completed\
+        
+    def to_dict(self) -> Dict:
+
+        def clean_data(data):
+            if isinstance(data, dict):
+                return {key: clean_data(value) for key, value in data.items()}
+            elif isinstance(data, list):
+                return [clean_data(item) for item in data]
+            elif isinstance(data, float) and np.isnan(data):
+                return None  # Replace nan with None
+            return data
+
+        data_dict = {
+            "student_id": self.student_id,
+            "program": self.program.value,
+            "courses": {
+                "semesters": [
+                    {
+                        "semester": sem.semester,
+                        "courses": [
+                            {
+                                "course_code": course.course_code,
+                                "course_name": course.course_name,
+                                "units": course.units,
+                                "semester_availability": course.semester_availability,
+                                "prerequisites": course.prerequisites,
+                                "program": course.program
+                            }
+                            for course in sem.courses
+                        ]
+                    }
+                    for sem in self.semesters
+                ]
+            }
+        }
+
+        # Clean the data dictionary
+        clean_data_dict = clean_data(data_dict)
+        
+        return clean_data_dict

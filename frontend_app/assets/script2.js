@@ -14,6 +14,7 @@ window.addEventListener("chainlit-call-fn", (e) => {
 
     dash_clientside.set_props("user-profile", {data: args.user_profile});
 
-    callback("You sent: " + args.user_profile);
+    // callback("You sent: " + JSON.stringify((args.user_profile)));
+    callback("You sent: ");
   }
 });

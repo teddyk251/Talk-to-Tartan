@@ -84,9 +84,9 @@ def update_url(login_status: dict, registration_status: dict):
     
     # Check if the login was successful
     if login_status and login_status['status'] == 'login_success':
-        return '/coursePlan' # Redirect to the talkToTartan page
+        return '/coursePlan' # Redirect to the coursePlan page
     elif login_status and login_status['status'] == 'logged_out':
-        return '/logout'
+        return dash.no_update
     
 
 @callback(

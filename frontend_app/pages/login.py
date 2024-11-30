@@ -10,6 +10,7 @@ from dash import callback_context as ctx
 
 
 from backend_client import sign_in_user
+import pandas as pd
 
 dash.register_page(__name__)
 
@@ -111,9 +112,7 @@ def handle_login(login_click: int, id: str, password: str):
                     message=response_json["message"],
                     icon=DashIconify(icon="ic:round-check"),
                 )
-
-                profile = get_dummy_profile()
-
+                profile = construct_user_courses("assets/all_courses_data.csv", response_json)
 
             else:
                 notification = dmc.Notification(
@@ -144,36 +143,15 @@ def handle_login(login_click: int, id: str, password: str):
     return dash.no_update, dash.no_update, dash.no_update
 
 
-import random
-def get_dummy_profile():
+def construct_user_courses(course_file_path: str, payload_response) -> dict:
 
-    sign_up = {
-        "first_name": "John Doe",
-        "andrew_ID": "johndoe",
-        "password": "password",
-        "program": "MSIT",
-        "interests": "I am interested in AI and ML",
-        "previous_experience": "I have a BSc in Computer Science",
-        "first_semester": False,
-        "completed_semesters": 2,
-        "starting_year": 2021,
-        "number_of_planned_semesters": 4,
-        "courses": {
-            "semesters": [
-                {
-                    "semester": i + 1,
-                    "courses": [
-                        {
-                            "course_name": f"Course {j + 1}",
-                            "course_code": f"{random.choice(['10', '15', '18', '11'])}-{random.randint(100, 999)}",
-                            "units": random.choice([6, 12])
-                        }
-                        for j in range(4)  # 4 courses per semester
-                    ]
-                }
-                for i in range(4)  # 4 semesters
-            ]
-        }
-    }
+    user_profile = payload_response["profile"]
+    course_catalog = pd.read_csv(course_file_path)
 
-    return sign_up
+    for semester in user_profile["courses"]["semesters"]:
+        for course in semester["courses"]:
+            course_info = course_catalog[course_catalog["course_code"] == course["course_code"]]
+            course["course_name"] = course_info["course_name"]
+            course["units"] = course_info["course_units"]
+
+    return user_profile

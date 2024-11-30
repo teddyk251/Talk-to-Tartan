@@ -30,6 +30,8 @@ def layout():
 )
 def update_course_plan(user_profile:dict, login_status: dict):
 
+    # print(f"\nUser profile to be updated: {user_profile}\n")
+
     if login_status and login_status.get('status') == 'login_success':
 
         parsed_courses = parse_registered_courses(user_profile)
@@ -39,6 +41,8 @@ def update_course_plan(user_profile:dict, login_status: dict):
         for semester, courses in parsed_courses.items():
             table = create_semester_table(semester, courses)
             semester_tables.append(table)
+
+        # print(f'semester_tables: {semester_tables}')
 
         return dmc.Paper(
             pt=20,

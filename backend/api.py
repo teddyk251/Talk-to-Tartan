@@ -304,6 +304,54 @@ def get_profile(andrew_ID):
         return jsonify(user), 200
     except Exception as e:
         return jsonify({'message': 'An error occurred while retrieving profile', 'error': str(e)}), 500
+    
+@app.route('/add_feedback', methods=['POST'])
+def add_feedback():
+    """
+    Endpoint to handle feedback data sent by the Chainlit app and store it in MongoDB.
+    """
+    try:
+        feedback_data = request.get_json()
+        # print(f"Feedback data received: {feedback_data}")
+        if not feedback_data:
+            return jsonify({"error": "Invalid data format, expected JSON"}), 400
+
+        # Validate required fields
+        required_fields = ['id', 'feedback', 'value', 'query', 'response']
+        if not all(field in feedback_data for field in required_fields):
+            return jsonify({"error": f"Missing required fields. Required: {required_fields}"}), 400
+
+        # Insert feedback data into MongoDB
+        feedback_collection = db['feedback']
+        feedback_collection.insert_one(feedback_data)
+
+        logging.info(f"Feedback successfully stored in MongoDB: {feedback_data}")
+        return jsonify({"message": "Feedback stored successfully!"}), 201
+    except Exception as e:
+        logging.error(f"Error storing feedback: {e}")
+        return jsonify({"error": "An error occurred while storing feedback", "details": str(e)}), 500
+
+@app.route('/get_feedback', methods=['GET'])
+def get_feedback():
+    """
+    Endpoint to retrieve all feedback stored in MongoDB.
+    """
+    try:
+        # Connect to the feedback collection
+        feedback_collection = db['feedback']
+        
+        # Retrieve all feedbacks from the collection
+        feedbacks = list(feedback_collection.find({}, {'_id': 0}))  # Exclude MongoDB's '_id' field for cleaner output
+        
+        if not feedbacks:
+            return jsonify({"message": "No feedbacks found"}), 404
+
+        logging.info(f"Feedbacks successfully retrieved from MongoDB:  {feedbacks}")
+        return jsonify({"feedbacks": feedbacks}), 200
+    except Exception as e:
+        logging.error(f"Error retrieving feedback: {e}")
+        return jsonify({"error": "An error occurred while retrieving feedback", "details": str(e)}), 500
+
 
 if __name__ == '__main__':
     # Start gRPC server in a separate thread
@@ -316,4 +364,4 @@ if __name__ == '__main__':
     
     # Start Flask server
     logger.info("Starting Flask application")
-    app.run(port=5000, debug=True, use_reloader=False)  # Disable reloader to avoid duplicate gRPC servers
+    app.run(port=5001, debug=True, use_reloader=False)  # Disable reloader to avoid duplicate gRPC servers

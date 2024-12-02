@@ -224,7 +224,9 @@ def get_personalized_system_prompt(user_info):
     7. **remove_course_from_plan tool**:
    - If the user asks to remove a course from their degree plan, remove the specified course from the indicated semester.
    - The input should be formatted as `<course_code> semester <semester_id>`.
-
+    8. **RecommendationFilterTool**:
+    - If the user asks you to recommend courses for them. Use the recommendation filter tool to first retrieve the courses that match with the user's query. And from the list of courses, filter courses being offered in the current semester and recommend the courses. Second, Check the list of courses that the student has already done. 
+    - DO NOT recommend courses that a student has already completed in the profile. Use this tool whenever you need to recommend any courses. Provide a comprehensive report of the courses with all details as returned by the course search tool.
     """
 
 # Define the tools
@@ -245,6 +247,105 @@ def filter_prerequisites(prerequisites):
                 filtered_prerequisites.extend(valid_codes)
     
     return filtered_prerequisites
+def determine_current_semester(profile):
+    """
+    Determine the current semester type (Fall or Spring) based on the courses completed.
+    Returns "Fall" or "Spring" based on the semester count.
+    """
+    completed_semesters = profile.get('courses', {}).get('semesters', [])
+    # Get the length of the semester
+    semester_count = len(completed_semesters)
+    if semester_count > 4:
+        return None  # Student has completed all semesters
+    return "Spring" if semester_count % 2 == 0 else "Fall"
+
+# import re
+def extract_course_codes(prerequisite_text):
+    """
+    Extract course codes from a prerequisite statement using regex.
+    A course code typically follows the pattern `XX-XXX` or `XX-XXX-XX`.
+
+    Args:
+        prerequisite_text (str): The prerequisite text.
+
+    Returns:
+        list: A list of course codes found in the text.
+    """
+    if not isinstance(prerequisite_text, str) or not prerequisite_text.strip():
+        return []  # Return an empty list for NaN or empty prerequisites
+
+    # Regex pattern for course codes (e.g., 04-800, 18-731, 04-800-H)
+    course_code_pattern = r'\b\d{2}-\d{3}(?:-[A-Z0-9]+)?\b'
+    course_name_pattern = r"course_name:\s*(.+)"
+    course_code_pattern = r"course_code:\s*(\d{2}-\d{3})"
+    course_name = re.findall(course_name_pattern, prerequisite_text)
+    course_code = re.findall(course_code_pattern, prerequisite_text)
+    courses = []
+    for i in zip(course_name,course_code):
+        courses.append(i)
+    
+    # Find all matches
+    # course_codes = re.findall(course_code_pattern, prerequisite_text)
+    # return course_name, course_code
+    return courses
+def filter_available_courses(courses, completed_courses):
+    """
+    Given a list of retrieved courses and the set of completed courses, 
+    return only the courses that the student has not taken.
+    
+    Args:
+        retrieved_courses (list): List of course codes retrieved for the current semester.
+        completed_courses (set): Set of course codes the student has already completed.
+
+    Returns:
+        list: A list of available course codes.
+    """
+    for course in courses:
+        if course[1] in completed_courses:
+            courses.remove(course)
+    # return set([course for course in codes if course not in completed_courses])
+    course_names = []
+    for course in courses:
+        course_names.append(course[0])
+    return course_names
+@tool
+def RecommendationFilterTool(query):
+    '''Recommend courses for a student based on their current semester profile and completed courses'''
+    logging.info("Entering RecommendationFilterTool\n")
+    logging.info(f"Query ----- {query}")
+    user_info = cl.user_session.get("user_info")
+    if not user_info:
+        logging.error("No current_user information available!\n")
+        return "Error: Could not retrieve students information !"
+    profile = user_info.get("profile",{})
+    current_semester = determine_current_semester(profile)
+    logging.info(f"The student is in the {current_semester} semester")
+    # check completed courses from the course catalogue (invoke course retriever)
+    if current_semester is None:
+        return "The student has completed all semesters. No recommendations needed."
+    complete_courses = [
+        course['course_code'] for sem in profile.get('courses',{}).get('semesters',[])
+        
+        for course in sem.get('courses',[]) if course['course_code']
+    ]
+    logging.info(f"Completed courses: {complete_courses}\n")
+    # Invoke course retriever
+    raw_courses = course_retriever_tool.invoke({"query": query})
+    logging.info(f"Retrieved courses: {raw_courses}\n")
+    # retrieved_courses, available_codes = extract_course_codes(raw_courses)
+    courses = extract_course_codes(raw_courses)
+    logging.info(f"Extracted courses - {courses}")
+    # logging.info(f"Filtered courses ------ {retrieved_courses}")
+    # logging.info(f"Extracted course codes: {retrieved_courses}\n")
+    # Filter out courses that the student has already completed
+    available_courses = filter_available_courses(courses, complete_courses)
+    logging.info(f"Recommended courses: {available_courses}\n")
+    
+    if not available_courses:
+        return "No new courses available to recommend for this semester."
+    
+    return f"Recommended courses for the current semester ({current_semester}). Use the following course names to retrieve their information: {', '.join(available_courses)}" 
+    
 @tool
 def validate_course_addition(input: str) -> str:
     """Validates if a course can be added to the specified semester in the degree plan."""
@@ -257,7 +358,6 @@ def validate_course_addition(input: str) -> str:
         #print(f'Starting validation for course {course_code} in semester {semester}')
         print(f"Course code: {course_code}, Semester: {semester}")
         print(f"Course code type: {type(course_code)}, Semester type: {type(semester)}")
-        
         
         
         degree_plan = cl.user_session.get("degree_plan")
@@ -607,7 +707,8 @@ async def setup_chain():
             show_degree_plan,
             validate_full_degree_plan,
             export_degree_plan,
-            remove_course_from_plan
+            remove_course_from_plan,
+            RecommendationFilterTool
         ]
 
         llm_with_tools = llm.bind_tools(tools)

@@ -825,11 +825,11 @@ async def handle_message(message: cl.Message):
             print(f"RES: {res}")
             await cl.Message(content=result["output"]).send()
 
-            feedback_data = Feedback(forId="some-id", comment="Great response!", value=1)
-            data_layer = cl_data._data_layer
-            last_query = cl.user_session.get("last_query", "No query found")
-            last_response = cl.user_session.get("last_response", "No response found")
-            await data_layer.upsert_feedback(feedback_data, last_query, last_response)
+            # feedback_data = Feedback(forId="some-id", comment="Great response!", value=1)
+            # data_layer = cl_data._data_layer
+            # last_query = cl.user_session.get("last_query", "No query found")
+            # last_response = cl.user_session.get("last_response", "No response found")
+            # await data_layer.upsert_feedback(feedback_data, last_query, last_response)
 
 
     except Exception as e:

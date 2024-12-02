@@ -11,17 +11,21 @@ class CustomDataLayer(cl_data.BaseDataLayer):
     Custom Data Layer to manage feedback, threads, and steps.
     """
 
-    async def upsert_feedback(self, feedback: Feedback, last_query: str, last_response: str) -> str:
+    async def upsert_feedback(self, feedback: Feedback) -> str:
         """
         Save user feedback along with the query and response.
         """
         # Prepare feedback payload
+        print(f"Type of feedback: {type(feedback)}")
+        print(f"Type of id: {type(feedback.forId)}")
+        print(f"Type of comment: {type(feedback.comment)}")
+        print(f"Type of value: {type(feedback.value)}")
         feedback_payload = {
             "id": feedback.forId,
             "feedback": feedback.comment,
-            "value": feedback.value,
-            "query": last_query,
-            "response": last_response,
+            "value": int(feedback.value),
+            # "query": last_query,
+            # "response": last_response,
         }
 
         # Save feedback to a backend or database (mocked here as a log)
@@ -30,7 +34,7 @@ class CustomDataLayer(cl_data.BaseDataLayer):
             logging.info(f"Feedback saved: {feedback_payload}")
 
             # Optionally send feedback to a Flask API
-            response = requests.post("http://localhost:5001/add_feedback", json=feedback_payload)
+            response = requests.post("http://localhost:5001/add_feedback", json=feedback_payload, headers={"Content-Type": "application/json"})
             response.raise_for_status()
             logging.info("Feedback successfully sent to the backend.")
             return "Feedback stored successfully!"

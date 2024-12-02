@@ -40,11 +40,15 @@ class DegreeValidator:
             },
             "EAI": {
                 "min_units": 144,
-                "core_units": 72,
-                "core_areas": [
-                    "18-751", "04-650", "04-655", "18-662", "18-661", "18-785", "18-787-K3", "18-788-K4",
-                    "04-654", "11-785", "18-797/11-755", "04-652"
-                ],
+            "core_units": 72,
+            "core_sections": {
+                "Math Fundamentals": ["18-751", "04-650"],
+                "Intro to AI": ["04-655", "18-662"],
+                "Intro to ML": ["18-661"],
+                "Data Science": ["18-785", "18-787-K3", "18-788-K4"],
+                "Advanced AI and ML": ["04-654", "11-785"],
+                "EAI Systems Design": ["04-652"]
+            },
                 "engineering_electives": 48,
                 "project_units": 24,
                 "project_areas": ["04-651", "04-701", "04-990"]
@@ -69,15 +73,17 @@ class DegreeValidator:
             "semester_analysis": []
         }
 
-        # Calculate total units and analyze each semester
+        # Initialize trackers
         total_units = 0
         core_units = 0
         project_units = 0
         core_courses_completed = set()
         project_courses_completed = set()
-        
-        print('Starting validation')
+        missing_core_courses = {}
 
+        print("Starting validation")
+
+        # Analyze each semester
         for semester_index, semester in enumerate(plan.semesters):
             semester_units = semester.total_units
             total_units += semester_units
@@ -98,28 +104,20 @@ class DegreeValidator:
                 })
 
                 # Check if the course is a core course and track core units
-                if course.course_code in program_reqs.get("core_areas", []):
-                    core_units += course.units
-                    core_courses_completed.add(course.course_code)
+                for section, courses in program_reqs.get("core_sections", {}).items():
+                    if course.course_code in courses:
+                        core_units += course.units
+                        core_courses_completed.add(course.course_code)
+                        #break  # Prevent double-counting in multiple sections
+                    print('Core courses completed:', core_courses_completed)
 
-                # check if the course is a project course
+                # Check if the course is a project course and track project units
                 if course.course_code in program_reqs.get("project_areas", []):
                     project_units += course.units
                     project_courses_completed.add(course.course_code)
-            print(f"Program plan {plan.program.value}")
-                # # Check prerequisites
-                # if course.prerequisites:
-                #     completed_courses = plan.get_completed_courses(semester_index)
-                #     for prereq in course.prerequisites:
-                #         if prereq not in completed_courses:
-                #             semester_analysis["issues"].append(
-                #                 f"Prerequisite {prereq} for course {course.course_code} is not met."
-                #             )
-                #             validation_report["issues"].append(
-                #                 f"Prerequisite {prereq} for course {course.course_code} in semester {semester_index + 1} is not met."
-                #             )
-            #print('Semester analysis:', semester_analysis)
-            # Validate the number of units for the semester
+                    print('Project courses completed:', project_courses_completed)
+
+            # Validate semester units
             if semester_units < self.MIN_SEMESTER_UNITS:
                 semester_analysis["issues"].append(
                     f"Insufficient units in semester {semester_index + 1}: {semester_units}/{self.MIN_SEMESTER_UNITS}"
@@ -137,24 +135,41 @@ class DegreeValidator:
 
             validation_report["semester_analysis"].append(semester_analysis)
 
+        # # Track missing core courses
+        # for section, courses in program_reqs.get("core_sections", {}).items():
+        #     missing_courses = set(courses) - core_courses_completed
+        #     if missing_courses:
+        #         missing_core_courses[section] = [
+        #             {"code": course, "name": self._get_course_name(course)} for course in missing_courses
+        #         ]
+
+        # # Add missing core courses to the report
+        # if missing_core_courses:
+        #     validation_report["missing_core_courses"] = missing_core_courses
+        #     for section, courses in missing_core_courses.items():
+        #         validation_report["issues"].append(
+        #             f"Missing core courses in section '{section}': {', '.join([course['code'] + ' (' + course['name'] + ')' for course in courses])}"
+        #         )
+
         # Program-specific validation
         if plan.program.value == "MSIT":
             # MSIT-specific validation (not fully implemented here)
             pass
         elif plan.program.value == "MSECE":
             self._validate_msece_requirements(
-                validation_report, total_units, core_courses_completed)
+                validation_report, total_units, core_courses_completed
+            )
         elif plan.program.value == "EAI":
-            # MSEAI-specific validation (not fully implemented here)
-            print("MSEAI validation not implemented yet")
             self._validate_mseai_requirements(
-                validation_report, total_units, core_units, project_units, core_courses_completed, project_courses_completed)
+                validation_report, total_units, core_units, project_units, core_courses_completed, project_courses_completed
+            )
 
         # Set overall validity
         validation_report["is_valid"] = len(validation_report["issues"]) == 0
         validation_report["total_units"] = total_units
         validation_report["core_units"] = core_units
-        validation_report["elective_units"] = total_units - core_units
+        validation_report["project_units"] = project_units
+        validation_report["elective_units"] = total_units - (core_units + project_units)
 
         return validation_report
 
@@ -177,72 +192,87 @@ class DegreeValidator:
             )
         
 
-        # Similarly, implement _validate_mseai_requirements
+        
     def _validate_mseai_requirements(self, report: Dict, total_units: int, core_units: int,
-                    project_units: int, core_courses_completed: set, project_courses_completed: set):
+                                 project_units: int, core_courses_completed: set, project_courses_completed: set):
         """Validate MSEAI-specific requirements"""
-        print("Validating MSEAI requirements")
-        
         reqs = self.program_requirements["EAI"]
-        
-        print(reqs)
 
-        print('Checking total units')
-        # Total units check
+        # Validate total units
         if total_units < reqs["min_units"]:
             report["issues"].append(
                 f"Insufficient total units: {total_units}/{reqs['min_units']}"
             )
 
-        print('Checking core units')
-        # Core units check
+        # Validate core units
         if core_units < reqs["core_units"]:
             report["issues"].append(
                 f"Insufficient core units: {core_units}/{reqs['core_units']}"
             )
 
-        print('Checking project units')
-        # core units check
+        # Validate project units
         if project_units < reqs["project_units"]:
             report["issues"].append(
                 f"Insufficient project units: {project_units}/{reqs['project_units']}"
             )
-          
-        print('checking missing core courses')  
-        # Check core courses completion
-        missing_core_courses = set(
-            reqs["core_areas"]) - core_courses_completed
-        if missing_core_courses:
-            # report["issues"].append(
-            #     f"Missing core courses: {', '.join(missing_core_courses)}"
-            # )
-            ## add course names to the course codes
-            for missing_course in missing_core_courses:
-                print(missing_course)
-                course_name = self.courses_df.loc[self.courses_df['course_code'] == missing_course, 'course_name'].values[0]
-                print(course_name)
-                report["issues"].append(
-                    f"Missing core course: {missing_course} - {course_name}"
-                )
+
+        # Validate core course categories and show missing courses with names
+        # for section, courses in reqs["core_sections"].items():
+        #     completed_in_section = core_courses_completed.intersection(courses)
+        #     if not completed_in_section:
+        #         # Get missing courses with their names
+        #         missing_courses = [
+        #             f"{course} - {self.courses_df.loc[self.courses_df['course_code'] == course, 'course_name'].values[0]}"
+        #             for course in courses
+        #             if course not in core_courses_completed
+        #         ]
+        #         report["issues"].append(
+        #             f"Missing course from section '{section}': Choose one from {', '.join(missing_courses)}"
+        #         )
+        #     else:
+        #         print(f"Section '{section}' validated with completed courses: {', '.join(completed_in_section)}")
+
+        # # Validate project course completion and show missing courses with names
+        # missing_project_courses = set(reqs["project_areas"]) - project_courses_completed
+        # if missing_project_courses:
+        #     for missing_course in missing_project_courses:
+        #         course_name = self.courses_df.loc[self.courses_df['course_code'] == missing_course, 'course_name'].values[0]
+        #         report["issues"].append(
+        #             f"Missing project course: {missing_course} - {course_name}"
+        #         )
         
-        print('checking missing project courses')
-        # Check project courses completion
-        missing_project_courses = set(
-            reqs["project_areas"]) - project_courses_completed
+        # Validate core course categories and show missing courses with names
+        # Validate core course categories and show missing courses with names
+        missing_sections = []
+        for section, courses in reqs["core_sections"].items():
+            completed_in_section = core_courses_completed.intersection(courses)
+            if not completed_in_section:
+                # Collect missing courses for this section
+                missing_courses = [
+                    f"{course} - {self.courses_df.loc[self.courses_df['course_code'] == course, 'course_name'].values[0]}"
+                    for course in courses
+                    if course not in core_courses_completed
+                ]
+                missing_sections.append(section)
+                print('Missing sections:', missing_sections)
+                # Append a detailed issue for the section
+                report["issues"].append(
+                    f"Missing course(s) from section '{section}': Choose one from {', '.join(missing_courses)}"
+                )
+            else:
+                print(f"Section '{section}' validated with completed courses: {', '.join(completed_in_section)}")
+
+        # Log the overall missing sections
+        if missing_sections:
+            report["warnings"].append(
+                f"The student has not completed required courses from the following sections: {', '.join(missing_sections)}"
+            )
+
+        # Validate project course completion and show missing courses with names
+        missing_project_courses = set(reqs["project_areas"]) - project_courses_completed
         if missing_project_courses:
-            # report["issues"].append(
-            #     f"Missing project courses: {', '.join(missing_project_courses)}"
-            # )
-        ### add course names to the course codes
             for missing_course in missing_project_courses:
                 course_name = self.courses_df.loc[self.courses_df['course_code'] == missing_course, 'course_name'].values[0]
-                print(course_name)
                 report["issues"].append(
                     f"Missing project course: {missing_course} - {course_name}"
                 )
-            
-        
-
-
-        # Core area requirements can be similarly validated
-        # e.g., check each area in reqs["core_areas"] as needed

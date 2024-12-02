@@ -351,6 +351,19 @@ def get_feedback():
     except Exception as e:
         logging.error(f"Error retrieving feedback: {e}")
         return jsonify({"error": "An error occurred while retrieving feedback", "details": str(e)}), 500
+    
+@app.route('/update_profile/<andrew_ID>', methods=['PUT'])
+def update_profile(andrew_ID):
+    try:
+        user = users_collection.find_one({'andrewID': andrew_ID})
+        if not user:
+            return jsonify({'message': 'User not found!'}), 404
+
+        data = request.get_json()
+        users_collection.update_one({'andrewID': andrew_ID}, {'$set': {'profile': data}})
+        return jsonify({'message': 'User profile updated successfully!'}), 200
+    except Exception as e:
+        return jsonify({'message': 'An error occurred while updating profile', 'error': str(e)}), 500
 
 
 if __name__ == '__main__':

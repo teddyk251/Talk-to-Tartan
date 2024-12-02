@@ -7,10 +7,13 @@ import math
 import re
 import time
 import asyncio
+import requests
 import pandas as pd
 from dataclasses import asdict
 from dotenv import load_dotenv
 import chainlit as cl
+import chainlit.data as cl_data
+from chainlit.types import Feedback
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.chains import LLMChain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -23,6 +26,7 @@ from langchain_community.vectorstores import FAISS
 from langchain.tools.retriever import create_retriever_tool
 from validators.models import DegreePlan, Course, SemesterPlan, Program
 from validators.validator import DegreeValidator
+from utils import feedback
 import logging
 
 # Configure logging
@@ -222,11 +226,19 @@ def get_personalized_system_prompt(user_info):
        - Export the degree plan in an Excel format that contains all the relevant course information, including semester, year, units, and course titles.
     
     7. **remove_course_from_plan tool**:
-   - If the user asks to remove a course from their degree plan, remove the specified course from the indicated semester.
-   - The input should be formatted as `<course_code> semester <semester_id>`.
+        - If the user asks to remove a course from their degree plan, remove the specified course from the indicated semester.
+        - The input should be formatted as `<course_code> semester <semester_id>`.
+
     8. **RecommendationFilterTool**:
-    - If the user asks you to recommend courses for them. Use the recommendation filter tool to first retrieve the courses that match with the user's query. And from the list of courses, filter courses being offered in the current semester and recommend the courses. Second, Check the list of courses that the student has already done. 
-    - DO NOT recommend courses that a student has already completed in the profile. Use this tool whenever you need to recommend any courses. Provide a comprehensive report of the courses with all details as returned by the course search tool.
+        - If the user asks you to recommend courses for them. Use the recommendation filter tool to first retrieve the courses that match with the user's query. And from the list of courses, filter courses being offered in the current semester and recommend the courses. Second, Check the list of courses that the student has already done. 
+        - DO NOT recommend courses that a student has already completed in the profile. Use this tool whenever you need to recommend any courses. Provide a comprehensive report of the courses with all details as returned by the course search tool.
+
+    9. **show_degree_plan tool**:
+        - If the user wants to view their plan, use this tool to display the current degree plan, listing all courses added so far by semester.
+
+    10. **save_degree_plan tool**:
+        - If the user wants to save their degree plan, use this tool to store the current degree plan in the user's profile.   
+
     """
 
 # Define the tools
@@ -259,7 +271,6 @@ def determine_current_semester(profile):
         return None  # Student has completed all semesters
     return "Spring" if semester_count % 2 == 0 else "Fall"
 
-# import re
 def extract_course_codes(prerequisite_text):
     """
     Extract course codes from a prerequisite statement using regex.
@@ -329,15 +340,13 @@ def RecommendationFilterTool(query):
         for course in sem.get('courses',[]) if course['course_code']
     ]
     logging.info(f"Completed courses: {complete_courses}\n")
-    # Invoke course retriever
+    
     raw_courses = course_retriever_tool.invoke({"query": query})
     logging.info(f"Retrieved courses: {raw_courses}\n")
-    # retrieved_courses, available_codes = extract_course_codes(raw_courses)
+    
     courses = extract_course_codes(raw_courses)
     logging.info(f"Extracted courses - {courses}")
-    # logging.info(f"Filtered courses ------ {retrieved_courses}")
-    # logging.info(f"Extracted course codes: {retrieved_courses}\n")
-    # Filter out courses that the student has already completed
+   
     available_courses = filter_available_courses(courses, complete_courses)
     logging.info(f"Recommended courses: {available_courses}\n")
     
@@ -368,12 +377,11 @@ def validate_course_addition(input: str) -> str:
         
         
 
-        # Extract course information from validator dataset
-        #print('HERE 1')
+       
         course_data = next(course for course in validator.courses_df.to_dict('records') if course['course_code'] == course_code)
-        #print('HERE 2')
+        
         prereq = course_data.get('Prerequisites', [""])
-        #print('HERE 3')
+        
         if not isinstance(prereq, list):
             prereq = [prereq] if isinstance(prereq, str) else []
         course = Course(
@@ -388,7 +396,7 @@ def validate_course_addition(input: str) -> str:
         print("Course data extracted")
 
         prerequisites = course.prerequisites
-        # if prerequisites :
+        
         if prerequisites is None or (isinstance(prerequisites, float) and math.isnan(prerequisites)):
             pass
         else:
@@ -399,23 +407,14 @@ def validate_course_addition(input: str) -> str:
                 if prereq not in completed_courses:
                     return f"Cannot add course {course_code}: Prerequisite {prereq} is not met. Please ensure the course is taken in an earlier semester."
         print("Passed prerequisites check")
-        # Check if the course is already added to the degree plan
+        
         for sem in degree_plan.semesters:
-            #print(f"split {semester.split(' ')}")
-            #semester = semester.split(" ")[1]
-            #print(f"Semester {sem.semester} - {int(semester)}")
             if sem.semester == semester:
                 if course_code in [c.course_code for c in sem.courses]:
                     return f"Course {course_code} is already added to {semester}."
         print("Passed course already added check")
         
-        # Check if the course is available in the specified semester
-        # Add logic to convert odd and even semesters to Fall and Spring
-        # If semester 1 -> Fall, semester 2 -> Spring , semester 3 -> Fall, etc.
-        #print(f"Semester --> {semester}")
-        # if "sem" in semester.lower():
-        #     semester = semester.split(" ")[1]
-        # else:
+       
         semester_number = semester
         semester_type = "Fall" if semester_number % 2 == 1 else "Spring"
         if semester_type not in course.semester_availability:
@@ -424,12 +423,7 @@ def validate_course_addition(input: str) -> str:
         print("Passed course availability check")
 
 
-        # Check if the course exceeds the maximum units allowed per semester
-        #print("Checking max units")
-        #print(f"Degree plan {degree_plan}")
-        #print(f"Semesters {degree_plan.semesters}")
-        #print(f"current Semester {semester}")
-        #print(type(degree_plan.semesters[0].total_units))
+       
         max_units_per_semester = 54
         for sem in degree_plan.semesters:
             print(f"Semester {sem.semester} - ")
@@ -475,7 +469,7 @@ def add_course_to_plan(input: str) -> str:
         # Locate the course from the course catalog
         validator = cl.user_session.get("validator")
         course_data = next(course for course in validator.courses_df.to_dict('records') if course['course_code'] == course_code)
-        # print(f" Course data {course_data}")
+        
         course = Course(
             course_code=course_data['course_code'],
             course_name=course_data['course_name'],
@@ -604,21 +598,21 @@ def validate_full_degree_plan() -> str:
 
         if report["is_valid"]:
             response = f"""DEGREE PLAN VALIDATION SUCCESSFUL ✓
-- Program: {plan.program}
-- Total Units: {report['total_units']}
-- Core Units: {report['core_units']}
-- Elective Units: {report['elective_units']}
+                        - Program: {plan.program}
+                        - Total Units: {report['total_units']}
+                        - Core Units: {report['core_units']}
+                        - Elective Units: {report['elective_units']}
 
-All requirements have been met for graduation."""
+                        All requirements have been met for graduation."""
         else:
             response = f"""DEGREE PLAN VALIDATION FAILED ✗
-- Program: {plan.program}
-- Total Units: {report['total_units']}
-- Core Units: {report['core_units']}
-- Elective Units: {report['elective_units']}
+                        - Program: {plan.program}
+                        - Total Units: {report['total_units']}
+                        - Core Units: {report['core_units']}
+                        - Elective Units: {report['elective_units']}
 
-Issues Found:
-"""
+                        Issues Found:
+                        """
             for issue in report["issues"]:
                 response += f"- {issue}\n"
                 
@@ -664,11 +658,64 @@ def export_degree_plan() -> str:
 
     except Exception as e:
         return f"ERROR exporting degree plan: {str(e)}"
+    
+@tool
+def save_degree_plan() -> str:
+    """
+    Saves the current degree plan in the user session to MongoDB using the provided API.
+    """
+    try:
+        # Retrieve the user info and degree plan from the session
+        user_info = cl.user_session.get("user_info")
+        degree_plan = cl.user_session.get("degree_plan")
+
+        if not user_info:
+            return "User information not found in session. Please log in first."
+
+        if not degree_plan:
+            return "No degree plan found in session. Please create or load a degree plan first."
+
+        # Convert the degree plan to a dictionary for storage
+        degree_plan_data = {
+            "student_id": degree_plan.student_id,
+            "program": degree_plan.program.value,
+            "semesters": [
+                {
+                    "semester": sem.semester,
+                    "courses": [
+                        {
+                            "course_code": course.course_code,
+                            "course_name": course.course_name,
+                            "units": course.units,
+                            "semester_availability": course.semester_availability,
+                            "prerequisites": course.prerequisites,
+                            "program": course.program,
+                        }
+                        for course in sem.courses
+                    ],
+                }
+                for sem in degree_plan.semesters
+            ],
+        }
+
+        # Make a PUT request to update the user's profile in MongoDB
+        api_url = f"http://localhost:5000/update_profile/{user_info['andrew_id']}"
+        response = requests.put(api_url, json={"degree_plan": degree_plan_data})
+
+        if response.status_code == 200:
+            return "Degree plan saved successfully!"
+        else:
+            return f"Failed to save degree plan. Server responded with: {response.json().get('message', 'Unknown error')}"
+
+    except Exception as e:
+        return f"An error occurred while saving the degree plan: {str(e)}"
+
 
 
 # Chat start event
 @cl.on_chat_start
 async def setup_chain():
+    cl_data._data_layer=feedback.CustomDataLayer()
     await cl.Message("Chainlit is ready. Please sign in to continue.").send()
 
     # Start polling for user sign-in
@@ -683,20 +730,7 @@ async def setup_chain():
         logging.info(f"User session initialized: {user_info}")
 
 
-    # logging.info("Setting up chain and waiting for user login...")
-    # await cl.Message("Waiting for user login...").send()
-
-    # Wait for user to login and retrieve user info
-    # user_info = cl.user_session.get("user_info")
-    # user_info = await wait_for_user_login()
-
-
-
-    # if user_info:
-        # logging.info(f"User info retrieved: {user_info}")
-        # welcome_message = f"Welcome {user_info['first_name']}! I see you're a {user_info['profile']['program']} student interested in {user_info['profile']['interests']}. How can I help you today?"
-        # await cl.Message(welcome_message).send()
-
+    
         # Initialize LLM and tools
         llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4o", temperature=0)
         
@@ -739,53 +773,11 @@ async def setup_chain():
         agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
         # Store user info and LLM chain in session
-        # cl.user_session.set("user_info", user_info)
         cl.user_session.set("llm_chain", agent_executor)
         degreePlan = convert_user_info_to_degree_plan(user_info)
         cl.user_session.set("degree_plan", degreePlan)
         cl.user_session.set("validator", DegreeValidator(COURSE_DATA_PATH))
-    # else:
-    #     logging.warning("Failed to retrieve user info")
-    #     await cl.Message("Failed to connect to login service. Please try again later.").send()
-    #     raise Exception("User profile retrieval failed. Chainlit cannot start without a user profile.")
 
-# Handles user message input
-# @cl.on_message
-# async def handle_message(message: cl.Message):
-#     llm_chain = cl.user_session.get("llm_chain")
-
-#     if not llm_chain:
-#         await cl.Message("Session not initialized properly. Please refresh the page.").send()
-#         return
-
-#     user_message = message.content.lower()
-
-#     try:
-#         # Show thinking message
-#         thinking_msg = cl.Message(content="Thinking...")
-#         await thinking_msg.send()
-
-#         # Run the chain with async handling
-#         result = await cl.make_async(llm_chain.invoke)({
-#             "input": user_message,
-#             "chat_history": chat_history
-#         })
-
-#         # Remove thinking message
-#         await thinking_msg.remove()
-
-#         # Update chat history
-#         chat_history.extend([
-#             HumanMessage(content=user_message),
-#             AIMessage(content=result["output"]),
-#         ])
-
-#         # Send the actual response
-#         await cl.Message(content=result["output"]).send()
-
-#     except Exception as e:
-#         logging.error(f"Error processing message: {str(e)}")
-#         await cl.Message("An error occurred while processing your message. Please try again.").send()
 @cl.on_message
 async def handle_message(message: cl.Message):
 
@@ -813,6 +805,10 @@ async def handle_message(message: cl.Message):
 
         # Update chat history and send the result
         chat_history.extend([HumanMessage(content=message.content), AIMessage(content=result["output"])])
+        # Store the last query and response in the user session
+        cl.user_session.set("last_query", message.content)
+        cl.user_session.set("last_response", result["output"])
+
         await thinking_msg.remove()
 
         if addDone == False and removeDone == False:
@@ -829,6 +825,13 @@ async def handle_message(message: cl.Message):
             print(f"RES: {res}")
             await cl.Message(content=result["output"]).send()
 
+            feedback_data = Feedback(forId="some-id", comment="Great response!", value=1)
+            data_layer = cl_data._data_layer
+            last_query = cl.user_session.get("last_query", "No query found")
+            last_response = cl.user_session.get("last_response", "No response found")
+            await data_layer.upsert_feedback(feedback_data, last_query, last_response)
+
+
     except Exception as e:
         logging.error(f"Error processing message: {e}")
         await cl.Message("An error occurred while processing your message. Please try again.").send()
@@ -836,39 +839,7 @@ async def handle_message(message: cl.Message):
 
 
 
-# Wait for user login function
-def get_user_info():
-    try:
-        logging.info("Attempting to get user info...")
-        channel = grpc.insecure_channel('localhost:50051')
-        stub = user_pb2_grpc.UserServiceStub(channel)
-        response = stub.GetUser(user_pb2.UserRequest())
 
-        user_info = {
-            'first_name': response.first_name,
-            'andrew_id': response.andrew_id,
-            'profile': json.loads(response.profile_json) if response.profile_json else {}
-        }
-
-        if user_info['andrew_id']:  # Only return if we got actual user data
-            logging.info(f"Successfully retrieved user info: {user_info}")
-            return user_info
-
-    except Exception as e:
-        logging.debug(f"Error getting user info: {str(e)}")
-        return None
-    finally:
-        try:
-            channel.close()
-        except:
-            pass
-
-# async def wait_for_user_login():
-#     user_info = None
-#     while not user_info:
-#         user_info = get_user_info()
-#         await asyncio.sleep(1)  # Use asyncio.sleep instead of time.sleep
-#     return user_info
 async def wait_for_user_login(timeout=30):
     retries = timeout
     while retries > 0:

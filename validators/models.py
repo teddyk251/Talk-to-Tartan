@@ -47,7 +47,7 @@ class DegreePlan:
         for semester in self.semesters:
             completed.update(course.course_code for course in semester.courses)
         print(f"Completed courses in the degree plan: {completed}")
-        return completed\
+        return completed
         
     def to_dict(self) -> Dict:
 

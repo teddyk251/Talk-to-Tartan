@@ -311,13 +311,16 @@ def add_feedback():
     Endpoint to handle feedback data sent by the Chainlit app and store it in MongoDB.
     """
     try:
+        print("Received feedback request")
+        print(f"Request data: {request.data}")
         feedback_data = request.get_json()
         # print(f"Feedback data received: {feedback_data}")
         if not feedback_data:
             return jsonify({"error": "Invalid data format, expected JSON"}), 400
 
         # Validate required fields
-        required_fields = ['id', 'feedback', 'value', 'query', 'response']
+        # required_fields = ['id', 'feedback', 'value', 'query', 'response']
+        required_fields = ['id', 'feedback', 'value']
         if not all(field in feedback_data for field in required_fields):
             return jsonify({"error": f"Missing required fields. Required: {required_fields}"}), 400
 

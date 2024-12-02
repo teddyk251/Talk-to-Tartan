@@ -113,9 +113,11 @@ class DegreeValidator:
 
                 # Check if the course is a project course and track project units
                 if course.course_code in program_reqs.get("project_areas", []):
-                    project_units += course.units
+                    project_units += int(course.units)
                     project_courses_completed.add(course.course_code)
                     print('Project courses completed:', project_courses_completed)
+
+            print("This is the first dummy print")
 
             # Validate semester units
             if semester_units < self.MIN_SEMESTER_UNITS:
@@ -125,6 +127,8 @@ class DegreeValidator:
                 validation_report["issues"].append(
                     f"Semester {semester_index + 1} has insufficient units ({semester_units})"
                 )
+                print ("This is the second dummy print")
+
             elif semester_units > self.MAX_SEMESTER_UNITS:
                 semester_analysis["issues"].append(
                     f"Too many units in semester {semester_index + 1}: {semester_units}/{self.MAX_SEMESTER_UNITS}"
@@ -132,6 +136,7 @@ class DegreeValidator:
                 validation_report["issues"].append(
                     f"Semester {semester_index + 1} has too many units ({semester_units})"
                 )
+                print ("This is the third dummy print")
 
             validation_report["semester_analysis"].append(semester_analysis)
 
@@ -261,6 +266,8 @@ class DegreeValidator:
                 )
             else:
                 print(f"Section '{section}' validated with completed courses: {', '.join(completed_in_section)}")
+
+        print('Missing sections:', missing_sections)
 
         # Log the overall missing sections
         if missing_sections:

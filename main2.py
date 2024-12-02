@@ -479,7 +479,7 @@ def add_course_to_plan(input: str) -> str:
         course = Course(
             course_code=course_data['course_code'],
             course_name=course_data['course_name'],
-            units=course_data['course_units'],
+            units=int(course_data['course_units']),
             semester_availability=course_data['course_semester'],
             prerequisites=course_data.get('Prerequisites', ""),
             program=course_data['Course discipline']

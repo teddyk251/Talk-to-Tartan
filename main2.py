@@ -594,6 +594,8 @@ def validate_full_degree_plan() -> str:
     try:
         validator = cl.user_session.get("validator")
         plan = cl.user_session.get("degree_plan")
+        
+        print(f"Starting validation for degree plan {plan.program.value}")
 
         if not plan:
             return "No degree plan found in the session. Please create or load a degree plan first."

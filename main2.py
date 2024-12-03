@@ -28,6 +28,7 @@ from validators.models import DegreePlan, Course, SemesterPlan, Program
 from validators.validator import DegreeValidator
 from utils import feedback
 import logging
+import numpy as np
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -597,16 +598,17 @@ def validate_full_degree_plan() -> str:
         report = validator.validate_full_plan(plan)
 
         if report["is_valid"]:
-            response = f"""DEGREE PLAN VALIDATION SUCCESSFUL ✓
+            response = f"""Congratulations!!!! 
+                        YOUR DEGREE PLAN HAS BEEN SUCCESSFULLY VALIDATED
                         - Program: {plan.program}
-                        - Total Units: {report['total_units']}
-                        - Core Units: {report['core_units']}
-                        - Elective Units: {report['elective_units']}
+                        - Total Units: {report['total_units']} ✅
+                        - Core Units: {report['core_units']} ✅
+                        - Elective Units: {report['elective_units']} ✅
 
                         All requirements have been met for graduation."""
         else:
             response = f"""DEGREE PLAN VALIDATION FAILED ✗
-                        - Program: {plan.program}
+                        - Program: {plan.program} 
                         - Total Units: {report['total_units']}
                         - Core Units: {report['core_units']}
                         - Elective Units: {report['elective_units']}
@@ -676,31 +678,70 @@ def save_degree_plan() -> str:
             return "No degree plan found in session. Please create or load a degree plan first."
 
         # Convert the degree plan to a dictionary for storage
+        # degree_plan_data = {
+        #     "student_id": degree_plan.student_id,
+        #     "program": degree_plan.program.value,
+        #     "courses": {
+        #         "semesters": [
+        #             {
+        #                 "semester": sem.semester,
+        #                 "courses": [
+        #                     {
+        #                         "course_code": course.course_code,
+        #                         "course_name": course.course_name,
+        #                         "units": course.units,
+        #                         "semester_availability": course.semester_availability,
+        #                         "prerequisites": course.prerequisites,
+        #                         "program": course.program
+        #                     }
+        #                     for course in sem.courses
+        #                 ]
+        #             }
+        #             for sem in degree_plan.semesters
+        #         ]
+        #     }
+        # }
         degree_plan_data = {
-            "student_id": degree_plan.student_id,
-            "program": degree_plan.program.value,
-            "semesters": [
-                {
-                    "semester": sem.semester,
-                    "courses": [
+                "program": user_info['profile']['program'],
+                "starting_year": user_info['profile']['starting_year'],
+                "interests": user_info['profile']['interests'],
+                "previous_experience": user_info['profile']['previous_experience'],
+                "number_of_semesters": len(degree_plan.semesters),
+                "courses": {
+                    "semesters": [
                         {
-                            "course_code": course.course_code,
-                            "course_name": course.course_name,
-                            "units": course.units,
-                            "semester_availability": course.semester_availability,
-                            "prerequisites": course.prerequisites,
-                            "program": course.program,
+                            "semester": sem.semester,
+                            "courses": [
+                                {
+                                    "course_code": course.course_code,
+                                    "course_name": course.course_name,
+                                    "units": course.units,
+                                    "semester_availability": course.semester_availability,
+                                    "prerequisites": course.prerequisites,
+                                    "program": course.program
+                                }
+                                for course in sem.courses
+                            ]
                         }
-                        for course in sem.courses
-                    ],
+                        for sem in degree_plan.semesters
+                    ]
                 }
-                for sem in degree_plan.semesters
-            ],
-        }
+            }
+        
+        print(f"Degree plan data: {degree_plan_data}")
+
+        def clean_data(data):
+            if isinstance(data, dict):
+                return {key: clean_data(value) for key, value in data.items()}
+            elif isinstance(data, list):
+                return [clean_data(item) for item in data]
+            elif isinstance(data, float) and np.isnan(data):
+                return None  # Replace nan with None
+            return data
 
         # Make a PUT request to update the user's profile in MongoDB
-        api_url = f"http://localhost:5000/update_profile/{user_info['andrew_id']}"
-        response = requests.put(api_url, json={"degree_plan": degree_plan_data})
+        api_url = f"http://localhost:5001/update_profile/{user_info['andrew_id']}"
+        response = requests.put(api_url, json=clean_data(degree_plan_data))
 
         if response.status_code == 200:
             return "Degree plan saved successfully!"
@@ -741,6 +782,7 @@ async def setup_chain():
             validate_course_addition,
             add_course_to_plan,
             show_degree_plan,
+            save_degree_plan,
             validate_full_degree_plan,
             export_degree_plan,
             remove_course_from_plan,

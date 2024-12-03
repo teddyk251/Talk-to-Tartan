@@ -51,7 +51,7 @@ class DegreeValidator:
             },
                 "engineering_electives": 48,
                 "project_units": 24,
-                "project_areas": ["04-651", "04-701", "04-990"]
+                "project_areas": ["04-651", "04-950", "04-653"]
             }
         }
 

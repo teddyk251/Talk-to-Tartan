@@ -6,7 +6,6 @@ from utils.helpers import iconify
 from dash_iconify import DashIconify
 
 from dash import Output, Input, State, callback
-from dash import callback_context as ctx
 
 
 from backend_client import sign_in_user
@@ -23,7 +22,6 @@ loginButtonStyle =   {
     "color": "white",
     "fontSize":"16px",
     "width":"100%"
-    
   }
 
 layout = dmc.Center(

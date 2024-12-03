@@ -31,7 +31,8 @@ external_scripts = [
 app = Dash(
     __name__, use_pages=True,
     external_stylesheets=stylesheets,
-    external_scripts=external_scripts
+    external_scripts=external_scripts,
+    suppress_callback_exceptions=True
 )
 
 app.layout = dmc.MantineProvider(
@@ -84,6 +85,7 @@ def update_url(login_status: dict, registration_status: dict):
     
     # Check if the login was successful
     if login_status and login_status['status'] == 'login_success':
+        time.sleep(1.5)
         return '/coursePlan' # Redirect to the coursePlan page
     elif login_status and login_status['status'] == 'logged_out':
         return dash.no_update

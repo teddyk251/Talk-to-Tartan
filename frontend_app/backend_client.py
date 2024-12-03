@@ -1,7 +1,7 @@
 import requests
 
 # BASE_URL = "http://172.29.104.127:5001"  # Flask backend API URL
-BASE_URL = "http://localhost:5000"  # Flask backend API URL
+BASE_URL = "http://localhost:5001"  # Flask backend API URL
 
 # Function for sign-up request
 def sign_up_user(payload: dict) -> dict:
@@ -19,11 +19,6 @@ def sign_up_user(payload: dict) -> dict:
     response = requests.post(url=f"{BASE_URL}/{endpoint}", json=payload)
 
     return response
-    
-    # if response.status_code == 200:
-    #     return response.json()
-    # else:
-    #     return {"error": f"Failed to sign up. Status Code: {response.status_code}"}
 
 
 # Function for sign-in request
@@ -43,11 +38,21 @@ def sign_in_user(payload: dict) -> dict:
     response = requests.post(url=f"{BASE_URL}/{endpoint}", json=payload)
 
     return response
+
+
+# Function for fetching feedack data
+def get_feedback_data() -> dict:
+    """
+    Sends a GET request to the feedback endpoint to retrieve feedback data.
     
-    # if response.status_code == 200:
-    #     return response.json()
-    # else:
-    #     return {"error": f"Failed to log in. Status Code: {response.status_code}"}
+    Returns:
+        dict: The JSON response from the Flask backend with feedback data.
+    """
+    endpoint = "get_feedback"  # Placeholder for your feedback endpoint
+
+    response = requests.get(url=f"{BASE_URL}/{endpoint}")
+
+    return response
 
 
 # # Example sign-up payload

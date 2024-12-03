@@ -15,10 +15,10 @@ sidebar = dmc.Box(
             leftSection=iconify(icon="fluent-mdl2:plan-view", width = 20),
             href='/coursePlan'
         ),
-        # dmc.NavLink(
-        #     label="Talk to Tartan",
-        #     leftSection=iconify(icon="tabler:message-chatbot", width = 20),
-        #     href='/talkToTartan'
-        # )
+        dmc.NavLink(
+            label="Feedback",
+            leftSection=iconify(icon="tabler:message-chatbot", width = 20),
+            href='/feedback'
+        )
     ]
 )

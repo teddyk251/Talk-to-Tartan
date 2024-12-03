@@ -1,9 +1,7 @@
 from dash import (
-    html, dcc, Output, Input, State, callback, 
+    html, Output, Input, callback, 
     register_page
 )
-# from flask import session
-import json
 import dash_mantine_components as dmc
 
 

@@ -10,7 +10,7 @@ register_page(__name__, path="/")
 __app__ = 'app.py'
 __home__ = 'pages/home/home.py'
 __coursePlan__ = 'pages/coursePlan.py'
-__talkToTartan__ = 'pages/talkToTartan.py'
+__feedback__ = 'pages/feedback.py'
 
 with open(__app__, 'r') as file:
     __app__ = file.read()
@@ -21,8 +21,8 @@ with open(__home__, 'r') as file:
 with open(__coursePlan__, 'r') as file:
     __coursePlan__ = file.read()
 
-with open(__talkToTartan__, 'r') as file:
-    __talkToTartan__ = file.read()
+with open(__feedback__, 'r') as file:
+    __feedback__ = file.read()
 
 
 ButtonStyle =  {

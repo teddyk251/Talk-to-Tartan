@@ -34,12 +34,14 @@ def update_course_plan(user_profile:dict, login_status: dict):
 
         parsed_courses = parse_registered_courses(user_profile)
 
+        print(f'Parsed courses: {parsed_courses}')
+
         semester_tables = []
 
-        for semester, courses in parsed_courses.items():
-            table = create_semester_table(semester, courses)
-            semester_tables.append(table)
-
+        if parsed_courses != None:
+            for semester, courses in parsed_courses.items():
+                table = create_semester_table(semester, courses)
+                semester_tables.append(table)
         # print(f'semester_tables: {semester_tables}')
 
         return dmc.Paper(
@@ -69,23 +71,28 @@ def parse_registered_courses(user_profile: dict):
     # get the courses from the user profile
     registered_courses = user_profile["courses"]["semesters"] # This returns a list of semesters
 
-    # Create a dictionary to store the parsed courses
-    parsed_courses = {} # semester_number: [course_code, course_name, units]
+    print(f"Registered courses: {registered_courses}")
 
-    if registered_courses == []:
-        parsed_courses = None
+    if registered_courses == None:
+        return []
     else:
-        for semester in registered_courses:
-            semester_number = semester["semester"]
-            courses = [] # course_code, course_name, units
-            for course in semester["courses"]:
-                course_code = course["course_code"]
-                course_name = course["course_name"]
-                units = course["units"]
-                courses.append([course_code, course_name, units])
-            parsed_courses[semester_number] = courses
+        # Create a dictionary to store the parsed courses
+        parsed_courses = {} # semester_number: [course_code, course_name, units]
 
-    return parsed_courses
+        if registered_courses == []:
+            parsed_courses = None
+        else:
+            for semester in registered_courses:
+                semester_number = semester["semester"]
+                courses = [] # course_code, course_name, units
+                for course in semester["courses"]:
+                    course_code = course["course_code"]
+                    course_name = course["course_name"]
+                    units = course["units"]
+                    courses.append([course_code, course_name, units])
+                parsed_courses[semester_number] = courses
+
+        return parsed_courses
 
 
 def create_semester_table(semester_number: int, courses: list):

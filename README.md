@@ -25,9 +25,9 @@ pip install -r requirements.txt
 ```
 2. **Create a `.env` file and add your `OPENAI_API_KEY`:**
 
-    ```sh
-    echo "OPENAI_API_KEY=your_openai_api_key" > .env
-    ```
+```
+echo "OPENAI_API_KEY=your_openai_api_key" > .env
+```
 
 ### Running the Program
 Run each of the following on a separate terminal session.

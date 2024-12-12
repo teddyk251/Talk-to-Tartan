@@ -1,0 +1,43 @@
+
+:root {
+    --logo-image-with:98px;
+    --header-height:80px;
+    --navbar-width:150px;
+    --app-root-margin-left :var(--navbar-width)
+}
+
+.mantine-AppShell-header{
+    height: var(--header-height); 
+}
+.header-inner-container{
+    height: calc(var(--header-height));
+}
+.cmu-mascot-logo-image { width: var(--logo-image-with)}
+
+.mantine-AppShell-navbar {
+    margin-top: calc(var(--header-height));
+    width: var(--navbar-width);
+}
+.mantine-AppShell-root{
+    margin-left: var(--app-root-margin-left);
+    margin-top: calc(var(--header-height));
+}
+
+@media only screen and (max-width: 61.99375em) { 
+    :root {
+        --app-root-margin-left:0px;
+        --logo-image-with:80px;
+        --header-height:50px;
+        --navbar-width:100%;
+   
+    }
+    .mantine-AppShell-navbar {
+        margin-left: 0px
+    }
+  }
+ 
+.test{
+    /* border: 2px solid red; */
+   z-index: 2000px;
+    /* marginBottom: -8px; */
+}

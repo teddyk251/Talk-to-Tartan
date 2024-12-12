@@ -13,3 +13,4 @@ __pycache__/
 # Ignore virtual environment files
 chainlit-env/
 test.ipynb
+ttt-dash-venv

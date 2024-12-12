@@ -1,3 +1,4 @@
+<<<<<<< HEAD:chainlit/requirements.txt
 chainlit==1.2.0
 langchain==0.3.3
 langchain_community==0.3.2
@@ -6,3 +7,15 @@ langchain_openai==0.2.2
 python-dotenv==1.0.1
 faiss-cpu==1.8.0
 openpyxl
+=======
+dash
+dash-bootstrap-components
+dash-bootstrap-templates
+plotly
+pandas
+
+dash-mantine-components
+dash-iconify
+gunicorn
+# authlib
+>>>>>>> 4d7e9730216f8a8c75b164c7cff4208c9521b542:requirements.txt

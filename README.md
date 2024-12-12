@@ -1,16 +1,23 @@
-# RAG Implentation
+# TALK TO TARTAN PROJECT
+## Clone the repo
+```
+git clone https://github.com/teddyk251/Talk-to-Tartan.git
+```
+## Create and activate  virtual environment.
+Ensure you have Conda installed in your system
+```
+conda create --name myenv python=3.10
+```
+```
+conda activate myenv
+```
 ## Getting Started
+1. **Create a virtual environment and install the required packages:**
 
-
-### Installation
-
-
-1. **Create a virtual environment and install required packages:**
-
-    ```sh
-    pip install -r requirements.txt
-    ```
-
+```
+cd chainlit
+pip install -r requirements.txt
+```
 2. **Create a `.env` file and add your `OPENAI_API_KEY`:**
 
     ```sh
@@ -18,8 +25,21 @@
     ```
 
 ### Running the Program
-
-  `chainlit run main.py -w` 
-
+Run each of the following on a separate terminal sessions
+1. **Run the backend application**
 ```
+cd backend
+python api.py
+```
+2. **Start Chainlit Application**
+```
+cd chainlit
+chainlit run main2.py -w
+```
+3. **Start the Front-end Application**
+```
+cd frontend_app
+python app.py
+```
+
 

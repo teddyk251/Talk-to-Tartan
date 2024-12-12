@@ -1,0 +1,8 @@
+Flask
+Dash
+pymongo
+werkzeug
+Flask-Cors
+requests
+grpcio
+grpcio-tools

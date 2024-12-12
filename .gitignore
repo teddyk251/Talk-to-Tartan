@@ -1,0 +1,15 @@
+# Ignore .env files
+.env
+.env.*
+
+# Ignore all files inside the .chainlit folder
+.chainlit/
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore virtual environment files
+chainlit-env/
+test.ipynb

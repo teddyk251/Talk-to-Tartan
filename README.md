@@ -1,4 +1,10 @@
 # TALK TO TARTAN PROJECT
+## System Architecture
+
+
+
+
+
 ## Clone the repo
 ```
 git clone https://github.com/teddyk251/Talk-to-Tartan.git
@@ -25,7 +31,7 @@ pip install -r requirements.txt
     ```
 
 ### Running the Program
-Run each of the following on a separate terminal sessions
+Run each of the following on a separate terminal session.
 1. **Run the backend application**
 ```
 cd backend

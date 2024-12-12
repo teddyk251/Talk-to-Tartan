@@ -1,9 +1,8 @@
 # TALK TO TARTAN PROJECT
+
 ## System Architecture
 
-
-
-
+![Screenshot 2024-12-12 174414](https://github.com/user-attachments/assets/58429c65-e4a0-4a06-b620-ebc58d9e0210)
 
 ## Clone the repo
 ```

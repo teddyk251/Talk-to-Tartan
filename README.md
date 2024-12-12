@@ -17,7 +17,7 @@ conda create --name myenv python=3.10
 conda activate myenv
 ```
 ## Getting Started
-1. **Create a virtual environment and install the required packages:**
+1. **Install the required packages:**
 
 ```
 cd chainlit

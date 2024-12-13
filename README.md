@@ -1,5 +1,8 @@
 # TALK TO TARTAN PROJECT
 
+## Demo of the application
+[Video](https://drive.google.com/file/d/1KHYijded7r3ig-t4wMCo5923LZrdv_kT/view?usp=drive_link)
+
 ## System Architecture
 
 ![Screenshot 2024-12-12 174414](https://github.com/user-attachments/assets/58429c65-e4a0-4a06-b620-ebc58d9e0210)
